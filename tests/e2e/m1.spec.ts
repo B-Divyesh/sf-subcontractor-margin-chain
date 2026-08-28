@@ -2,7 +2,8 @@ import { expect, request, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }, testInfo) => {
   const projectOctet = testInfo.project.name === "mobile" ? 113 : 114;
-  await page.setExtraHTTPHeaders({ "X-Forwarded-For": `203.0.${projectOctet}.${testInfo.parallelIndex + 10}` });
+  const claimOctet = [...testInfo.testId].reduce((total, character) => total + character.charCodeAt(0), 0) % 200 + 10;
+  await page.setExtraHTTPHeaders({ "X-Forwarded-For": `203.0.${projectOctet}.${claimOctet}` });
 });
 
 test("@claim:m1-chain-math shows the exact job-chain calculation", async ({ page }) => {

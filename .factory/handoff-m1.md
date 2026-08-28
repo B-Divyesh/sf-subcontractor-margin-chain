@@ -4,7 +4,7 @@ Date: 2026-08-28
 
 Work order: `venture-subcontractor-margin-chain-m1`
 
-Milestone state: **built, deployed, and locally verified; ready for review → polish**
+Milestone state: **built, deployed, and live-verified; ready for review → polish**
 
 Live product: <https://subcontractor-margin-chain.sociobot.in>
 
@@ -32,12 +32,14 @@ The plan remains correct, so its milestone boundaries were not changed. Its top-
 - `npm test`: 8 passed.
 - `cargo test --manifest-path server/Cargo.toml --locked`: 11 passed across domain, store, health, and API integration tests.
 - `npm run test:e2e`: 38 passed across desktop Chromium and a 390px Chromium profile. Every `@claim:m1-*` entry runs in both profiles.
-- `npm run build`: passed. Initial bundle: 96.44 KiB JS gzip and 5.58 KiB CSS gzip. First-choice WOFF2 fonts total 71.02 KiB. SVG hero/social assets stay below the image budget.
+- Live claim pass: 12 passed against the deployed URL, covering all six claims in desktop Chromium and the 390px profile. Each clean context uses a stable test-only forwarded address so claim isolation does not consume another claim's 5/hour provisioning allowance.
+- `npm run build`: passed. Initial bundle: 96.46 KiB JS gzip and 5.67 KiB CSS gzip. First-choice WOFF2 fonts total 71.02 KiB. SVG hero/social assets stay below the image budget.
 - `cargo build --manifest-path server/Cargo.toml --release --locked`: passed.
 - Lighthouse mobile on the local production server: performance 98, accessibility 100, best practices 100, SEO 100; LCP 2.0s, CLS 0.026, total blocking time 30ms.
 - Load smoke: 1,000 requests at a target 100 requests/second over 10 seconds; 354 accepted and 646 deliberately limited with 429; overall p95 response time 96ms.
 - Factory ACR build completed successfully. The Azure Container App started from only `PORT=8080`; `/health` returned the injected source SHA.
 - Factory live verifier: HTTPS 200, cold load 641ms, zero console/page errors, title and `lang` present, one `<h1>`, one `<main>`, no missing image alt, and no unlabeled buttons.
+- The deployed image reports build `25fff52e75a07df349bc0a954e79b924156c0ff2` from `/health`. The Container App is pinned to one replica, matching the M1 process-local `DemoStore` architecture.
 - Live desktop and mobile evidence is under `.factory/evidence/m1-live/`.
 
 The local worker image had no Docker-compatible runtime, so `docker build` could not run locally. The required Dockerfile build was instead exercised by the successful Azure Container Registry build used for deployment.
@@ -54,6 +56,7 @@ The local worker image had no Docker-compatible runtime, so `docker build` could
 ## Known gaps and M2 needs
 
 - M1 demo workspaces are intentionally process-local. Container restarts discard them; the UI and terms state this.
+- M1 must remain at one replica. The generic deploy helper initially selected a maximum of three, which let requests for one HttpOnly workspace reach different process stores. Production was corrected to `minReplicas=1,maxReplicas=1`. A future helper rerun must preserve that setting until M2 replaces the store with SQLite/shared persistence.
 - The milestone review and polish pass must complete before M2 starts.
 - M2 adds Sociobot Entra CIAM, stable `oid` identity, SQLite/sqlx tenant persistence and reversible migrations, organization roles and rate projection, trial state, and the Sociobot billing adapter.
 - Before M2 production sign-in, register and verify `https://subcontractor-margin-chain.sociobot.in/auth/callback` on the shared Entra SPA application.

@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }, testInfo) => {
   const projectOctet = testInfo.project.name === "mobile" ? 117 : 118;
-  await page.setExtraHTTPHeaders({ "X-Forwarded-For": `203.0.${projectOctet}.${testInfo.parallelIndex + 10}` });
+  const testOctet = [...testInfo.testId].reduce((total, character) => total + character.charCodeAt(0), 0) % 200 + 10;
+  await page.setExtraHTTPHeaders({ "X-Forwarded-For": `203.0.${projectOctet}.${testOctet}` });
 });
 
 for (const path of ["/", "/demo", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms", "/404"]) {
