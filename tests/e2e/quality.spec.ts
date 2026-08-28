@@ -98,3 +98,49 @@ test("the 390px layout and 200% text zoom do not overflow", async ({ page }) => 
   expect(widths.scroll).toBeLessThanOrEqual(widths.client + 1);
   await expect(page.getByLabel("Margin check")).toBeVisible();
 });
+
+test("in-chain cost errors identify and focus every invalid field", async ({ page }) => {
+  let costRequests = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/costs")) costRequests += 1;
+  });
+  await page.goto("/demo/chains/autumn-launch-films");
+  await expect(page.getByRole("heading", { name: "Autumn launch films" })).toBeVisible();
+  await page.getByLabel("Amount in USD").fill("1");
+  await page.getByRole("button", { name: "Add commitment" }).click();
+
+  const subcontractor = page.getByRole("textbox", { name: "Subcontractor", exact: true });
+  const role = page.getByRole("textbox", { name: "Work covered" });
+  await expect(subcontractor).toBeFocused();
+  await expect(subcontractor).toHaveAttribute("aria-invalid", "true");
+  await expect(subcontractor).toHaveAttribute("aria-describedby", "cost-subcontractor-error");
+  await expect(page.locator("#cost-subcontractor-error")).toHaveText("Enter the subcontractor name.");
+  await expect(role).toHaveAttribute("aria-invalid", "true");
+  await expect(role).toHaveAttribute("aria-describedby", "cost-role-error");
+  await expect(page.locator("#cost-role-error")).toHaveText("Name the work this commitment covers.");
+  expect(costRequests).toBe(0);
+
+  await subcontractor.fill("Mara Bell");
+  await role.fill("Location sound mix");
+  await page.getByRole("button", { name: "Add commitment" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Saved Location sound mix" })).toBeVisible();
+  expect(costRequests).toBe(1);
+});
+
+test("all measured mobile navigation links have 44px touch targets", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/demo/chains/autumn-launch-films");
+  await expect(page.getByRole("heading", { name: "Autumn launch films" })).toBeVisible();
+  const links = [
+    page.getByRole("link", { name: "MC Margin Chain" }),
+    page.getByRole("link", { name: "Job register" }),
+    page.getByRole("contentinfo").getByRole("link", { name: "Privacy" }),
+    page.getByRole("contentinfo").getByRole("link", { name: "Terms" }),
+    page.getByRole("contentinfo").getByRole("link", { name: /Built by Param Factory/ }),
+  ];
+  for (const link of links) {
+    const box = await link.boundingBox();
+    expect(box, await link.textContent()).not.toBeNull();
+    expect(box!.height, await link.textContent()).toBeGreaterThanOrEqual(44);
+  }
+});

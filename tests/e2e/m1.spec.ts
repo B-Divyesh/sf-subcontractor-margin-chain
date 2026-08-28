@@ -54,6 +54,7 @@ test("@claim:m1-demo-no-account opens a usable sample without CIAM", async ({ pa
 
 test("@claim:m1-demo-reset discards changes and invalidates the old workspace", async ({ page, context, baseURL }) => {
   await page.goto("/demo/chains/autumn-launch-films");
+  await expect(page.getByRole("heading", { name: "Autumn launch films" })).toBeVisible();
   const oldCookie = (await context.cookies()).find((cookie) => cookie.name === "smc_demo");
   expect(oldCookie).toBeTruthy();
   await page.getByRole("textbox", { name: "Subcontractor", exact: true }).fill("Mara Bell");

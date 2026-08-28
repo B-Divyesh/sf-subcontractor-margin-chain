@@ -88,7 +88,7 @@
     "claim": "Demo API routes enforce request limits using the ingress client address",
     "where": "demo contract",
     "test": "cargo test --manifest-path server/Cargo.toml --test demo_api global_and_provision_limits_use_forwarded_ip_and_send_retry_after --locked",
-    "sandbox": "exceed provisioning and global API allowances with X-Forwarded-For; assert 429 and Retry-After"
+    "sandbox": "alternate requests with one X-Forwarded-For across two independent replicas sharing persistence; exceed provisioning and global allowances; assert 429 and Retry-After"
   },
   {
     "id": "m1-demo-no-store",

@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   addCost,
+  ApiProblem,
   approveScope,
   getChain,
   updateMilestone,
@@ -17,6 +18,7 @@ export function ChainPage() {
   const [chain, setChain] = useState<JobChain | null>(null);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [costErrors, setCostErrors] = useState<Partial<Record<"subcontractor" | "role" | "amount", string>>>({});
   const [saving, setSaving] = useState("");
   const [receipt, setReceipt] = useState("");
   const [retry, setRetry] = useState(0);
@@ -47,24 +49,49 @@ export function ChainPage() {
     const form = event.currentTarget;
     setActionError("");
     const data = new FormData(event.currentTarget);
+    const subcontractor = String(data.get("subcontractor")).trim();
+    const role = String(data.get("role")).trim();
     const amount = dollarsToMinor(String(data.get("amount")));
+    const errors: typeof costErrors = {};
+    if (subcontractor.length < 2 || subcontractor.length > 120) {
+      errors.subcontractor = "Enter the subcontractor name.";
+    }
+    if (role.length < 2 || role.length > 120) {
+      errors.role = "Name the work this commitment covers.";
+    }
     if (amount === null) {
-      setActionError("Enter the commitment in dollars, using no more than two decimal places.");
-      const field = form.elements.namedItem("amount");
+      errors.amount = "Enter dollars using no more than two decimal places.";
+    }
+    setCostErrors(errors);
+    const firstInvalid = (["subcontractor", "role", "amount"] as const).find((field) => errors[field]);
+    if (firstInvalid) {
+      const field = form.elements.namedItem(firstInvalid);
       if (field instanceof HTMLElement) field.focus();
       return;
     }
     setSaving("cost");
     try {
       const next = await addCost(chainId, {
-        subcontractor: String(data.get("subcontractor")),
-        role: String(data.get("role")),
-        amount_minor: amount,
+        subcontractor,
+        role,
+        amount_minor: amount!,
       });
-      finishAction(next, `Saved ${String(data.get("role"))} as a new commitment.`);
+      finishAction(next, `Saved ${role} as a new commitment.`);
       form.reset();
     } catch (problem) {
-      setActionError(problem instanceof Error ? problem.message : "We could not save this cost. Check your connection and try again.");
+      const apiProblem = problem instanceof ApiProblem ? problem : null;
+      const field = apiProblem
+        ? ({ subcontractor: "subcontractor", role: "role", amount_minor: "amount" } as const)[apiProblem.field as "subcontractor" | "role" | "amount_minor"]
+        : undefined;
+      if (field) {
+        setCostErrors({ [field]: apiProblem!.message });
+        window.setTimeout(() => {
+          const input = form.elements.namedItem(field);
+          if (input instanceof HTMLElement) input.focus();
+        });
+      } else {
+        setActionError(problem instanceof Error ? problem.message : "We could not save this cost. Check your connection and try again.");
+      }
     } finally {
       setSaving("");
     }
@@ -171,9 +198,9 @@ export function ChainPage() {
               <form className="inline-sheet-form" onSubmit={submitCost} noValidate>
                 <h3>Add a committed cost</h3>
                 <div className="field-grid">
-                  <label>Subcontractor<input name="subcontractor" autoComplete="off" required minLength={2} maxLength={120} /></label>
-                  <label>Work covered<input name="role" autoComplete="off" required minLength={2} maxLength={120} /></label>
-                  <label>Amount in USD<span className="money-input"><span aria-hidden="true">$</span><input name="amount" inputMode="decimal" required aria-describedby="amount-help" /></span><small id="amount-help">Use dollars and up to two decimal places.</small></label>
+                  <div className="field-control"><label htmlFor="cost-subcontractor">Subcontractor</label><input id="cost-subcontractor" name="subcontractor" autoComplete="off" required minLength={2} maxLength={120} aria-invalid={costErrors.subcontractor ? true : undefined} aria-describedby={costErrors.subcontractor ? "cost-subcontractor-error" : undefined} />{costErrors.subcontractor && <small id="cost-subcontractor-error" className="form-error">{costErrors.subcontractor}</small>}</div>
+                  <div className="field-control"><label htmlFor="cost-role">Work covered</label><input id="cost-role" name="role" autoComplete="off" required minLength={2} maxLength={120} aria-invalid={costErrors.role ? true : undefined} aria-describedby={costErrors.role ? "cost-role-error" : undefined} />{costErrors.role && <small id="cost-role-error" className="form-error">{costErrors.role}</small>}</div>
+                  <div className="field-control"><label htmlFor="cost-amount">Amount in USD</label><span className="money-input"><span aria-hidden="true">$</span><input id="cost-amount" name="amount" inputMode="decimal" required aria-invalid={costErrors.amount ? true : undefined} aria-describedby={costErrors.amount ? "amount-help cost-amount-error" : "amount-help"} /></span><small id="amount-help">Use dollars and up to two decimal places.</small>{costErrors.amount && <small id="cost-amount-error" className="form-error">{costErrors.amount}</small>}</div>
                 </div>
                 <button className="primary-action" type="submit" disabled={saving === "cost"}>{saving === "cost" ? "Saving…" : "Add commitment"}</button>
               </form>

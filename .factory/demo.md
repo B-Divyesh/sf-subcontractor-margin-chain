@@ -14,7 +14,7 @@ M1 creates an opaque, random demo workspace through `POST /api/v1/demo/workspace
 
 `sessionStorage` may store presentation preferences under `smc:demo:v1:*`. It is not the record source. Production storage keys and API routes never load while the demo banner is present.
 
-Every demo response, including errors, carries `Cache-Control: no-store`. Demo endpoints have stricter IP and workspace rate limits. Logs do not contain client names or money values.
+Every demo response, including errors, carries `Cache-Control: no-store`. Demo endpoints have stricter IP and workspace rate limits. Production stores hashed quota keys beside the shared demo store, so one allowance applies across all replicas. Quota records contain only acceptance times and a SHA-256 key digest; they do not contain the raw ingress address. Logs do not contain client names or money values.
 
 ## Seeded agency and jobs
 

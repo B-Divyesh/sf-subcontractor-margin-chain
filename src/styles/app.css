@@ -89,7 +89,7 @@
     justify-content: space-between;
     gap: var(--space-5);
   }
-  .wordmark { display: inline-flex; align-items: center; gap: var(--space-3); color: var(--color-ink); font-weight: 700; text-decoration: none; }
+  .wordmark { display: inline-flex; min-height: var(--control-min); align-items: center; gap: var(--space-3); color: var(--color-ink); font-weight: 700; text-decoration: none; }
   .wordmark__mark {
     display: grid;
     width: 2.75rem;
@@ -157,6 +157,7 @@
   .site-footer small { font-variant-numeric: tabular-nums; }
   .site-footer > * { min-width: 0; }
   .site-footer small { overflow-wrap: anywhere; }
+  .site-footer nav a, .breadcrumbs a { display: inline-flex; min-height: var(--control-min); align-items: center; }
 
   .dialog-overlay { position: fixed; z-index: 40; inset: 0; background: var(--color-scrim); animation: fade-in var(--duration-standard) both; }
   .sheet-dialog {
@@ -213,7 +214,8 @@
   .action-error { max-width: 54rem; padding: var(--space-3) var(--space-4); border-left: 4px solid var(--color-danger); background: var(--color-paper-red); }
   .action-receipt { max-width: 54rem; padding: var(--space-3) var(--space-4); border-left: 4px solid var(--color-success); background: #eef7ee; }
 
-  label { display: grid; gap: var(--space-2); color: var(--color-ink); font-weight: 700; }
+  label, .field-control { display: grid; gap: var(--space-2); }
+  label { color: var(--color-ink); font-weight: 700; }
   input, textarea {
     width: 100%;
     min-height: var(--control-min);
@@ -225,7 +227,8 @@
   }
   input[aria-invalid="true"], textarea[aria-invalid="true"] { border: 2px solid var(--color-danger); }
   textarea { min-height: 8rem; resize: vertical; }
-  label small, fieldset > small { color: var(--color-ink-muted); font-weight: 400; }
+  label small, .field-control small, fieldset > small { color: var(--color-ink-muted); font-weight: 400; }
+  .field-control .form-error { color: var(--color-danger); font-weight: 700; }
   .money-input, .suffix-input {
     display: grid;
     grid-template-columns: auto 1fr;

@@ -361,10 +361,19 @@ async fn claim_demo_cookie_is_scoped_and_secure_on_https() {
 
 #[tokio::test]
 async fn global_and_provision_limits_use_forwarded_ip_and_send_retry_after() {
-    let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
+    let directory = tempfile::tempdir().unwrap();
+    let app_a = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_demo(DemoStore::filesystem(directory.path()).unwrap()),
+    );
+    let app_b = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_demo(DemoStore::filesystem(directory.path()).unwrap()),
+    );
     for attempt in 0..6 {
+        let app = if attempt % 2 == 0 { &app_a } else { &app_b };
         let (status, headers, _) = send(
-            &app,
+            app,
             Method::POST,
             "/api/v1/demo/workspaces",
             None,
@@ -382,8 +391,9 @@ async fn global_and_provision_limits_use_forwarded_ip_and_send_retry_after() {
     }
 
     for attempt in 0..41 {
+        let app = if attempt % 2 == 0 { &app_a } else { &app_b };
         let (status, headers, _) = send(
-            &app,
+            app,
             Method::GET,
             "/api/v1/not-a-route",
             None,
@@ -399,4 +409,77 @@ async fn global_and_provision_limits_use_forwarded_ip_and_send_retry_after() {
             assert!(headers.get(header::RETRY_AFTER).is_some());
         }
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_idempotent_retries_stay_available_and_create_one_cost() {
+    let directory = tempfile::tempdir().unwrap();
+    let app_a = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_demo(DemoStore::filesystem(directory.path()).unwrap()),
+    );
+    let app_b = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_demo(DemoStore::filesystem(directory.path()).unwrap()),
+    );
+    let cookie = workspace(&app_a, "198.51.100.123").await;
+    let body = json!({
+        "subcontractor":"Mara Bell",
+        "role":"Location sound mix",
+        "amount_minor":600000
+    });
+    let mut tasks = Vec::new();
+    for attempt in 0..12 {
+        let app = if attempt % 2 == 0 {
+            app_a.clone()
+        } else {
+            app_b.clone()
+        };
+        let cookie = cookie.clone();
+        let body = body.clone();
+        tasks.push(tokio::spawn(async move {
+            send(
+                &app,
+                Method::POST,
+                "/api/v1/demo/chains/autumn-launch-films/costs",
+                Some(&cookie),
+                Some(body),
+                Some("same-concurrent-cost-retry"),
+                "198.51.100.123",
+            )
+            .await
+            .0
+        }));
+    }
+    let mut statuses = Vec::new();
+    for task in tasks {
+        statuses.push(task.await.unwrap());
+    }
+    assert_eq!(
+        statuses
+            .iter()
+            .filter(|status| **status == StatusCode::CREATED)
+            .count(),
+        1
+    );
+    assert_eq!(
+        statuses
+            .iter()
+            .filter(|status| **status == StatusCode::OK)
+            .count(),
+        11
+    );
+
+    let (status, _, chain) = send(
+        &app_b,
+        Method::GET,
+        "/api/v1/demo/chains/autumn-launch-films",
+        Some(&cookie),
+        None,
+        None,
+        "198.51.100.123",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(chain["costs"].as_array().unwrap().len(), 3);
 }

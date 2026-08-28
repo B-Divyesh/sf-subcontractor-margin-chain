@@ -14,8 +14,8 @@ Avoid generic dashboard grids, gradient blobs, glass panels, rounded pill clouds
 ## Stack decision
 
 - **Frontend:** React 19, Vite, strict TypeScript, React Router, and small Radix primitives. The chain workspace has interdependent money fields, revisions, permission-based views, dialogs, and dense editable rows. React's form and accessibility ecosystem earns its runtime here. Styling remains hand-written CSS driven by tokens; no Tailwind or themed component kit.
-- **Backend:** Rust 2021, axum, tokio, sqlx, and SQLite in WAL mode. SQLite meets the initial boutique-agency load, permits a zero-configuration container, and makes encrypted backups and tenant exports straightforward. Run one writer replica with a durable `/data` volume. Move to PostgreSQL when write contention or horizontal API replicas are measured, not pre-emptively.
-- **Delivery:** one multi-stage container. Axum serves `/api/*`, `/health`, and the built Vite assets from `dist/`. This keeps routing and security headers under one deployment.
+- **Backend:** Rust 2021, axum, and tokio. M1 stores anonymous demo workspaces and rate-limit buckets in a private shared Azure Blob container, using ETags, bounded contention backoff, and idempotent no-op reads across replicas. A local container uses locked JSON files under `/data/demo-workspaces`. M2 still plans sqlx/SQLite for authenticated tenant data; that choice must be revisited before horizontal tenant writes ship.
+- **Delivery:** one multi-stage container with three supported application replicas. Axum serves `/api/*`, `/health`, and the built Vite assets from `dist/`. Shared M1 persistence and quotas keep routing behavior consistent across those replicas.
 - **Fonts and scripts:** self-hosted only. M1 will check in subset WOFF2 files and OFL license texts. No runtime CDN.
 
 ## Palette

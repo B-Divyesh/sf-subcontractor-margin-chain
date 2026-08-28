@@ -18,7 +18,7 @@ Accounts, real agency storage, team roles, and hosted checkout are M2 work. M1 d
 
 - React 19, React Router, strict TypeScript, and Vite
 - Rust 2021, axum, and tokio
-- A shared Azure Blob demo store in production, with durable filesystem storage for local containers
+- Shared Azure Blob demo records and rate limits in production, with locked filesystem storage for local containers
 - One multi-stage container that serves the JSON API and built web assets on `PORT`
 
 The server needs only `PORT`, which defaults to 8080. Production selects shared storage through its managed identity; local containers use `/data`. Health, readiness, and Prometheus metrics are available at `/health`, `/ready`, and `/internal/metrics`.
@@ -53,7 +53,7 @@ Each public claim and its exact command is listed in [`.factory/claims.json`](.f
 
 ## API
 
-The M1 routes are under `/api/v1/demo/`. Create operations require an `Idempotency-Key`. Errors use `application/problem+json`. Every demo response uses `Cache-Control: no-store`.
+The M1 routes are under `/api/v1/demo/`. Create operations require an `Idempotency-Key`. Idempotent retries return the saved result without rewriting it. Per-client limits are shared across replicas and every `429` includes `Retry-After`. Errors use `application/problem+json`. Every demo response uses `Cache-Control: no-store`.
 
 The server stores money as signed integer cents and calculates the floor with conservative upward rounding. It never uses a binary floating-point value as the authoritative money amount.
 

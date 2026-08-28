@@ -5,18 +5,19 @@ use crate::domain::{
 use fs2::FileExt;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
     fs::{self, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     sync::{Arc, Mutex, RwLock},
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 pub const DEMO_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct AppState {
     pub demo: DemoStore,
     pub rate_limits: RateLimits,
@@ -25,19 +26,26 @@ pub struct AppState {
 
 impl AppState {
     pub fn production() -> Self {
+        let demo = DemoStore::production();
         Self {
-            demo: DemoStore::production(),
-            rate_limits: RateLimits::default(),
+            rate_limits: RateLimits::for_store(&demo),
+            demo,
             metrics: Metrics::default(),
         }
     }
 
     pub fn with_demo(demo: DemoStore) -> Self {
         Self {
+            rate_limits: RateLimits::for_store(&demo),
             demo,
-            rate_limits: RateLimits::default(),
             metrics: Metrics::default(),
         }
+    }
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::with_demo(DemoStore::default())
     }
 }
 
@@ -68,6 +76,11 @@ pub enum IdempotentResult {
     Chain(JobChain),
 }
 
+pub enum Mutation<T> {
+    Changed(T),
+    Unchanged(T),
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct WorkspaceCreated {
     pub expires_at: u64,
@@ -89,6 +102,12 @@ impl DemoStore {
     }
 
     pub fn production() -> Self {
+        if let Some(path) = std::env::var_os("DEMO_DATA_DIR").map(PathBuf::from) {
+            return Self::filesystem(&path).unwrap_or_else(|error| {
+                tracing::warn!(?path, %error, "configured demo directory unavailable; using process-local storage");
+                Self::memory()
+            });
+        }
         if let (Ok(identity_endpoint), Ok(identity_header)) = (
             std::env::var("IDENTITY_ENDPOINT"),
             std::env::var("IDENTITY_HEADER"),
@@ -107,9 +126,7 @@ impl DemoStore {
             };
         }
 
-        let path = std::env::var_os("DEMO_DATA_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("/data/demo-workspaces"));
+        let path = PathBuf::from("/data/demo-workspaces");
         Self::filesystem(&path).unwrap_or_else(|error| {
             tracing::warn!(?path, %error, "durable demo directory unavailable; using process-local storage");
             Self::memory()
@@ -171,7 +188,7 @@ impl DemoStore {
         operation: F,
     ) -> Result<Option<T>, StoreError>
     where
-        F: Fn(&mut Workspace) -> T,
+        F: Fn(&mut Workspace) -> Mutation<T>,
     {
         match self.backend.as_ref() {
             StoreBackend::Memory => Ok(None),
@@ -184,7 +201,9 @@ impl DemoStore {
                     store.remove(id);
                     return Ok(None);
                 }
-                Ok(Some(operation(workspace)))
+                Ok(Some(match operation(workspace) {
+                    Mutation::Changed(result) | Mutation::Unchanged(result) => result,
+                }))
             }
             StoreBackend::Filesystem(path) => mutate_file_workspace(path, id, operation),
             StoreBackend::Azure(store) => store.mutate(id, operation).await,
@@ -331,7 +350,7 @@ fn mutate_file_workspace<T, F>(
     operation: F,
 ) -> Result<Option<T>, StoreError>
 where
-    F: Fn(&mut Workspace) -> T,
+    F: Fn(&mut Workspace) -> Mutation<T>,
 {
     let path = workspace_path(directory, id);
     let mut file = match OpenOptions::new().read(true).write(true).open(path) {
@@ -346,12 +365,16 @@ where
     if workspace.expires_at_epoch_seconds <= epoch_seconds() {
         return Ok(None);
     }
-    let result = operation(&mut workspace);
-    file.seek(SeekFrom::Start(0))?;
-    file.set_len(0)?;
-    file.write_all(&serde_json::to_vec(&workspace)?)?;
-    file.sync_all()?;
-    Ok(Some(result))
+    match operation(&mut workspace) {
+        Mutation::Unchanged(result) => Ok(Some(result)),
+        Mutation::Changed(result) => {
+            file.seek(SeekFrom::Start(0))?;
+            file.set_len(0)?;
+            file.write_all(&serde_json::to_vec(&workspace)?)?;
+            file.sync_all()?;
+            Ok(Some(result))
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -363,6 +386,7 @@ struct AzureBlobStore {
     identity_header: String,
     client_id: String,
     token: Arc<tokio::sync::Mutex<Option<AccessToken>>>,
+    container_ready: Arc<tokio::sync::OnceCell<()>>,
 }
 
 #[derive(Clone)]
@@ -412,6 +436,7 @@ impl AzureBlobStore {
             identity_header,
             client_id,
             token: Arc::new(tokio::sync::Mutex::new(None)),
+            container_ready: Arc::new(tokio::sync::OnceCell::new()),
         }
     }
 
@@ -463,6 +488,14 @@ impl AzureBlobStore {
     fn blob_url(&self, id: &str) -> String {
         format!("{}/{}/{}.json", self.endpoint, self.container, id)
     }
+    fn rate_blob_url(&self, key: &str) -> String {
+        format!(
+            "{}/{}/_rate/{}.json",
+            self.endpoint,
+            self.container,
+            rate_key(key)
+        )
+    }
 
     async fn request(
         &self,
@@ -479,24 +512,29 @@ impl AzureBlobStore {
     }
 
     async fn ensure_container(&self) -> Result<(), StoreError> {
-        let response = self
-            .request(
-                reqwest::Method::PUT,
-                format!("{}?restype=container", self.container_url()),
-            )
-            .await?
-            .header("Content-Length", "0")
-            .send()
+        self.container_ready
+            .get_or_try_init(|| async {
+                let response = self
+                    .request(
+                        reqwest::Method::PUT,
+                        format!("{}?restype=container", self.container_url()),
+                    )
+                    .await?
+                    .header("Content-Length", "0")
+                    .send()
+                    .await
+                    .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+                if response.status().is_success() || response.status() == StatusCode::CONFLICT {
+                    Ok(())
+                } else {
+                    Err(StoreError::Unavailable(format!(
+                        "blob container returned {}",
+                        response.status()
+                    )))
+                }
+            })
             .await
-            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
-        if response.status().is_success() || response.status() == StatusCode::CONFLICT {
-            Ok(())
-        } else {
-            Err(StoreError::Unavailable(format!(
-                "blob container returned {}",
-                response.status()
-            )))
-        }
+            .copied()
     }
 
     async fn insert_new(&self, workspace: &Workspace) -> Result<(), StoreError> {
@@ -549,11 +587,94 @@ impl AzureBlobStore {
         Ok(Some((workspace, etag)))
     }
 
+    async fn get_rate_bucket(&self, key: &str) -> Result<Option<(RateBucket, String)>, StoreError> {
+        let response = self
+            .request(reqwest::Method::GET, self.rate_blob_url(key))
+            .await?
+            .send()
+            .await
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !response.status().is_success() {
+            return Err(StoreError::Unavailable(format!(
+                "rate-limit read returned {}",
+                response.status()
+            )));
+        }
+        let etag = response
+            .headers()
+            .get("etag")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or_default()
+            .to_owned();
+        let bucket = response
+            .json()
+            .await
+            .map_err(|error| StoreError::Unavailable(error.to_string()))?;
+        Ok(Some((bucket, etag)))
+    }
+
+    async fn check_rate_limit(
+        &self,
+        key: &str,
+        allowance: usize,
+        period: Duration,
+    ) -> Result<(), RateLimitError> {
+        self.ensure_container()
+            .await
+            .map_err(RateLimitError::Unavailable)?;
+        for attempt in 0..64 {
+            let current = self
+                .get_rate_bucket(key)
+                .await
+                .map_err(RateLimitError::Unavailable)?;
+            let (mut bucket, etag) = current
+                .map(|(bucket, etag)| (bucket, Some(etag)))
+                .unwrap_or_default();
+            check_bucket(
+                &mut bucket.accepted_at_millis,
+                epoch_milliseconds(),
+                allowance,
+                period,
+            )?;
+            let mut request = self
+                .request(reqwest::Method::PUT, self.rate_blob_url(key))
+                .await
+                .map_err(RateLimitError::Unavailable)?
+                .header("x-ms-blob-type", "BlockBlob")
+                .json(&bucket);
+            request = if let Some(etag) = etag {
+                request.header("If-Match", etag)
+            } else {
+                request.header("If-None-Match", "*")
+            };
+            let response = request.send().await.map_err(|error| {
+                RateLimitError::Unavailable(StoreError::Unavailable(error.to_string()))
+            })?;
+            if response.status().is_success() {
+                return Ok(());
+            }
+            if response.status() != StatusCode::PRECONDITION_FAILED
+                && response.status() != StatusCode::CONFLICT
+            {
+                return Err(RateLimitError::Unavailable(StoreError::Unavailable(
+                    format!("rate-limit update returned {}", response.status()),
+                )));
+            }
+            tokio::time::sleep(contention_backoff(attempt)).await;
+        }
+        Err(RateLimitError::Unavailable(StoreError::Unavailable(
+            "shared rate-limit update remained busy after retries".into(),
+        )))
+    }
+
     async fn mutate<T, F>(&self, id: &str, operation: F) -> Result<Option<T>, StoreError>
     where
-        F: Fn(&mut Workspace) -> T,
+        F: Fn(&mut Workspace) -> Mutation<T>,
     {
-        for _ in 0..5 {
+        for attempt in 0..64 {
             let Some((mut workspace, etag)) = self.get(id).await? else {
                 return Ok(None);
             };
@@ -561,7 +682,10 @@ impl AzureBlobStore {
                 let _ = self.remove(id).await;
                 return Ok(None);
             }
-            let result = operation(&mut workspace);
+            let result = match operation(&mut workspace) {
+                Mutation::Unchanged(result) => return Ok(Some(result)),
+                Mutation::Changed(result) => result,
+            };
             let response = self
                 .request(reqwest::Method::PUT, self.blob_url(id))
                 .await?
@@ -580,6 +704,7 @@ impl AzureBlobStore {
                     response.status()
                 )));
             }
+            tokio::time::sleep(contention_backoff(attempt)).await;
         }
         Err(StoreError::Unavailable(
             "shared demo update remained busy after retries".into(),
@@ -630,6 +755,9 @@ impl AzureBlobStore {
             .map_err(|error| StoreError::Unavailable(error.to_string()))?;
         let mut removed = 0;
         for item in list.blobs.blob {
+            if item.name.starts_with("_rate/") {
+                continue;
+            }
             let Some(id) = item.name.strip_suffix(".json") else {
                 continue;
             };
@@ -658,27 +786,166 @@ fn epoch_seconds() -> u64 {
         .as_secs()
 }
 
-#[derive(Clone, Default)]
+fn epoch_milliseconds() -> u64 {
+    u64::try_from(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+    )
+    .unwrap_or(u64::MAX)
+}
+
+#[derive(Clone)]
 pub struct RateLimits {
-    buckets: Arc<Mutex<HashMap<String, Vec<Instant>>>>,
+    backend: Arc<RateLimitBackend>,
+}
+
+enum RateLimitBackend {
+    Memory(Mutex<HashMap<String, Vec<u64>>>),
+    Filesystem(PathBuf),
+    Azure(AzureBlobStore),
+}
+
+#[derive(Debug)]
+pub enum RateLimitError {
+    Limited(u64),
+    Unavailable(StoreError),
 }
 
 impl RateLimits {
-    pub fn check(&self, key: &str, allowance: usize, period: Duration) -> Result<(), u64> {
-        let now = Instant::now();
-        let mut buckets = self.buckets.lock().expect("rate-limit store poisoned");
-        let entries = buckets.entry(key.to_owned()).or_default();
-        entries.retain(|instant| now.duration_since(*instant) < period);
-        if entries.len() >= allowance {
-            let retry = period
-                .saturating_sub(now.duration_since(entries[0]))
-                .as_secs()
-                .max(1);
-            return Err(retry);
+    fn for_store(store: &DemoStore) -> Self {
+        let backend = match store.backend.as_ref() {
+            StoreBackend::Azure(store) => RateLimitBackend::Azure(store.clone()),
+            StoreBackend::Filesystem(path) => {
+                RateLimitBackend::Filesystem(path.join("rate-limits"))
+            }
+            StoreBackend::Memory | StoreBackend::MemoryState(_) => {
+                RateLimitBackend::Memory(Mutex::new(HashMap::new()))
+            }
+        };
+        Self {
+            backend: Arc::new(backend),
         }
-        entries.push(now);
-        Ok(())
     }
+
+    pub async fn check(
+        &self,
+        key: &str,
+        allowance: usize,
+        period: Duration,
+    ) -> Result<(), RateLimitError> {
+        match self.backend.as_ref() {
+            RateLimitBackend::Memory(buckets) => {
+                let now = epoch_milliseconds();
+                let mut buckets = buckets.lock().expect("rate-limit store poisoned");
+                check_bucket(
+                    buckets.entry(key.to_owned()).or_default(),
+                    now,
+                    allowance,
+                    period,
+                )
+            }
+            RateLimitBackend::Filesystem(directory) => {
+                check_file_bucket(directory, key, allowance, period)
+            }
+            RateLimitBackend::Azure(store) => store.check_rate_limit(key, allowance, period).await,
+        }
+    }
+}
+
+impl Default for RateLimits {
+    fn default() -> Self {
+        Self {
+            backend: Arc::new(RateLimitBackend::Memory(Mutex::new(HashMap::new()))),
+        }
+    }
+}
+
+#[derive(Default, Deserialize, Serialize)]
+struct RateBucket {
+    accepted_at_millis: Vec<u64>,
+}
+
+fn check_bucket(
+    entries: &mut Vec<u64>,
+    now: u64,
+    allowance: usize,
+    period: Duration,
+) -> Result<(), RateLimitError> {
+    let period_millis = u64::try_from(period.as_millis()).unwrap_or(u64::MAX);
+    entries.retain(|accepted| now.saturating_sub(*accepted) < period_millis);
+    if entries.len() >= allowance {
+        let retry_millis = period_millis.saturating_sub(now.saturating_sub(entries[0]));
+        return Err(RateLimitError::Limited(retry_millis.div_ceil(1_000).max(1)));
+    }
+    entries.push(now);
+    Ok(())
+}
+
+fn rate_key(key: &str) -> String {
+    let digest = Sha256::digest(key.as_bytes());
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn check_file_bucket(
+    directory: &Path,
+    key: &str,
+    allowance: usize,
+    period: Duration,
+) -> Result<(), RateLimitError> {
+    fs::create_dir_all(directory)
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    let path = directory.join(format!("{}.json", rate_key(key)));
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(path)
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    file.lock_exclusive()
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    let mut bucket = if bytes.is_empty() {
+        RateBucket::default()
+    } else {
+        serde_json::from_slice(&bytes)
+            .map_err(StoreError::from)
+            .map_err(RateLimitError::Unavailable)?
+    };
+    let result = check_bucket(
+        &mut bucket.accepted_at_millis,
+        epoch_milliseconds(),
+        allowance,
+        period,
+    );
+    file.seek(SeekFrom::Start(0))
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    file.set_len(0)
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    let encoded = serde_json::to_vec(&bucket)
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    file.write_all(&encoded)
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    file.sync_all()
+        .map_err(StoreError::from)
+        .map_err(RateLimitError::Unavailable)?;
+    result
+}
+
+fn contention_backoff(attempt: u32) -> Duration {
+    Duration::from_millis((2_u64.saturating_pow(attempt.min(5))).min(32))
 }
 
 #[derive(Clone, Debug, Deserialize)]

@@ -1,5 +1,8 @@
 use crate::{
-    demo::{AppState, IdempotentResult, NewChain, StoreError, WorkspaceCreated},
+    demo::{
+        AppState, IdempotentResult, Mutation, NewChain, RateLimitError, StoreError,
+        WorkspaceCreated,
+    },
     domain::{
         new_id, CostCommitment, CostState, JobChain, MarginCalculation, MilestoneStatus,
         ScopeStatus,
@@ -175,9 +178,10 @@ pub async fn global_rate_limit(
     match state
         .rate_limits
         .check(&format!("global:{ip}"), 40, Duration::from_secs(1))
+        .await
     {
         Ok(()) => next.run(request).await,
-        Err(retry_after) => ApiError::rate_limited(retry_after).into_response(),
+        Err(error) => rate_limit_error(error).into_response(),
     }
 }
 
@@ -242,7 +246,8 @@ async fn create_workspace(
     state
         .rate_limits
         .check(&format!("provision:{ip}"), 5, Duration::from_secs(60 * 60))
-        .map_err(ApiError::rate_limited)?;
+        .await
+        .map_err(rate_limit_error)?;
     let (workspace_id, created) = state.demo.create().await.map_err(store_error)?;
     let mut response = (StatusCode::CREATED, Json(created)).into_response();
     let secure = forwarded_https(&headers);
@@ -263,7 +268,7 @@ async fn delete_workspace(
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    check_demo_write(&state, &headers, &workspace_id)?;
+    check_demo_write(&state, &headers, &workspace_id).await?;
     if !state
         .demo
         .remove(&workspace_id)
@@ -337,7 +342,7 @@ async fn create_chain(
     Json(input): Json<NewChain>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    check_demo_write(&state, &headers, &workspace_id)?;
+    check_demo_write(&state, &headers, &workspace_id).await?;
     let key = idempotency_key(&headers)?;
     input.validate().map_err(|(field, detail)| {
         ApiError::new(
@@ -353,14 +358,14 @@ async fn create_chain(
         .demo
         .with_workspace(&workspace_id, |workspace| {
             if let Some(IdempotentResult::Chain(chain)) = workspace.idempotency.get(&key) {
-                return (StatusCode::OK, chain.clone());
+                return Mutation::Unchanged((StatusCode::OK, chain.clone()));
             }
             let chain = input.clone().into_chain();
             workspace.chains.push(chain.clone());
             workspace
                 .idempotency
                 .insert(key.clone(), IdempotentResult::Chain(chain.clone()));
-            (StatusCode::CREATED, chain)
+            Mutation::Changed((StatusCode::CREATED, chain))
         })
         .await
         .map_err(store_error)?
@@ -383,7 +388,7 @@ async fn update_chain(
     Json(input): Json<ChainPatch>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    check_demo_write(&state, &headers, &workspace_id)?;
+    check_demo_write(&state, &headers, &workspace_id).await?;
     if input.client_commitment_minor.is_none() && input.margin_floor_basis_points.is_none() {
         return Err(ApiError::new(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -419,10 +424,13 @@ async fn update_chain(
     let result = state
         .demo
         .with_workspace(&workspace_id, |workspace| {
-            let chain = workspace
+            let Some(chain) = workspace
                 .chains
                 .iter_mut()
-                .find(|chain| chain.id == chain_id)?;
+                .find(|chain| chain.id == chain_id)
+            else {
+                return Mutation::Unchanged(None);
+            };
             if let Some(amount) = input.client_commitment_minor {
                 chain.client_commitment_minor = Some(amount);
                 chain.last_risk_cause = Some("Client commitment changed".into());
@@ -432,7 +440,7 @@ async fn update_chain(
                 chain.last_risk_cause = Some("Margin floor changed".into());
             }
             chain.version += 1;
-            Some(chain.clone())
+            Mutation::Changed(Some(chain.clone()))
         })
         .await
         .map_err(store_error)?
@@ -457,7 +465,7 @@ async fn add_cost(
     Json(input): Json<NewCost>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    check_demo_write(&state, &headers, &workspace_id)?;
+    check_demo_write(&state, &headers, &workspace_id).await?;
     let key = idempotency_key(&headers)?;
     if input.subcontractor.trim().chars().count() < 2 || input.subcontractor.chars().count() > 120 {
         return Err(ApiError::new(
@@ -490,12 +498,15 @@ async fn add_cost(
         .demo
         .with_workspace(&workspace_id, |workspace| {
             if let Some(IdempotentResult::Chain(chain)) = workspace.idempotency.get(&key) {
-                return Some((StatusCode::OK, chain.clone()));
+                return Mutation::Unchanged(Some((StatusCode::OK, chain.clone())));
             }
-            let chain = workspace
+            let Some(chain) = workspace
                 .chains
                 .iter_mut()
-                .find(|chain| chain.id == chain_id)?;
+                .find(|chain| chain.id == chain_id)
+            else {
+                return Mutation::Unchanged(None);
+            };
             let role = input.role.trim().to_owned();
             chain.costs.push(CostCommitment {
                 id: new_id(),
@@ -510,7 +521,7 @@ async fn add_cost(
             workspace
                 .idempotency
                 .insert(key.clone(), IdempotentResult::Chain(chain.clone()));
-            Some((StatusCode::CREATED, chain))
+            Mutation::Changed(Some((StatusCode::CREATED, chain)))
         })
         .await
         .map_err(store_error)?
@@ -533,7 +544,7 @@ async fn update_scope(
     Json(input): Json<ScopePatch>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    check_demo_write(&state, &headers, &workspace_id)?;
+    check_demo_write(&state, &headers, &workspace_id).await?;
     if input.status != ScopeStatus::Approved {
         return Err(ApiError::new(
             StatusCode::CONFLICT,
@@ -545,14 +556,19 @@ async fn update_scope(
     let result = state
         .demo
         .with_workspace(&workspace_id, |workspace| {
-            let chain = workspace
+            let Some(chain) = workspace
                 .chains
                 .iter_mut()
-                .find(|chain| chain.id == chain_id)?;
-            let scope = chain.scopes.iter_mut().find(|scope| scope.id == scope_id)?;
+                .find(|chain| chain.id == chain_id)
+            else {
+                return Mutation::Unchanged(None);
+            };
+            let Some(scope) = chain.scopes.iter_mut().find(|scope| scope.id == scope_id) else {
+                return Mutation::Unchanged(None);
+            };
             scope.status = ScopeStatus::Approved;
             chain.version += 1;
-            Some(chain.clone())
+            Mutation::Changed(Some(chain.clone()))
         })
         .await
         .map_err(store_error)?
@@ -575,29 +591,35 @@ async fn update_milestone(
     Json(input): Json<MilestonePatch>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    check_demo_write(&state, &headers, &workspace_id)?;
+    check_demo_write(&state, &headers, &workspace_id).await?;
     let result = state
         .demo
         .with_workspace(&workspace_id, |workspace| {
-            let chain = workspace
+            let Some(chain) = workspace
                 .chains
                 .iter_mut()
-                .find(|chain| chain.id == chain_id)?;
-            let milestone = chain
+                .find(|chain| chain.id == chain_id)
+            else {
+                return Mutation::Unchanged(None);
+            };
+            let Some(milestone) = chain
                 .milestones
                 .iter_mut()
-                .find(|milestone| milestone.id == milestone_id)?;
+                .find(|milestone| milestone.id == milestone_id)
+            else {
+                return Mutation::Unchanged(None);
+            };
             if !milestone.status.can_transition_to(input.status) {
-                return Some(Err(ApiError::new(
+                return Mutation::Unchanged(Some(Err(ApiError::new(
                     StatusCode::CONFLICT,
                     "invalid_transition",
                     "Invoice state cannot change",
                     "Choose the next invoice state and try again.",
-                )));
+                ))));
             }
             milestone.status = input.status;
             chain.version += 1;
-            Some(Ok(chain.clone()))
+            Mutation::Changed(Some(Ok(chain.clone())))
         })
         .await
         .map_err(store_error)?
@@ -639,7 +661,7 @@ fn idempotency_key(headers: &HeaderMap) -> Result<String, ApiError> {
     Ok(value.to_owned())
 }
 
-fn check_demo_write(
+async fn check_demo_write(
     state: &AppState,
     headers: &HeaderMap,
     workspace: &str,
@@ -652,11 +674,20 @@ fn check_demo_write(
             30,
             Duration::from_secs(60),
         )
-        .map_err(ApiError::rate_limited)?;
+        .await
+        .map_err(rate_limit_error)?;
     state
         .rate_limits
         .check(&format!("demo-ip-write:{ip}"), 60, Duration::from_secs(60))
-        .map_err(ApiError::rate_limited)
+        .await
+        .map_err(rate_limit_error)
+}
+
+fn rate_limit_error(error: RateLimitError) -> ApiError {
+    match error {
+        RateLimitError::Limited(retry_after) => ApiError::rate_limited(retry_after),
+        RateLimitError::Unavailable(error) => store_error(error),
+    }
 }
 
 fn client_ip(headers: &HeaderMap) -> String {

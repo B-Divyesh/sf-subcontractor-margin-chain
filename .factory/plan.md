@@ -124,7 +124,8 @@ Browser (React/Vite)
              │
 Axum application (single Container App, PORT 8080)
   ├─ global security headers and per-route rate limits
-  ├─ DemoStore (M1 isolated, TTL, never tenant repositories)
+  ├─ DemoStore (M1 shared Azure Blob, isolated TTL workspaces)
+  ├─ shared demo quota buckets (same store, ingress IP keys)
   ├─ TenantStore (M2 SQLite, every query carries organization_id)
   ├─ Auth discovery/JWKS cache
   ├─ Billing adapter → Sociobot API → Dodo
@@ -133,7 +134,7 @@ Axum application (single Container App, PORT 8080)
       /data/app.sqlite3 + rotating backups
 ```
 
-The Vite build targets ES2022. Axum serves hashed assets and uses an SPA fallback for known frontend routes; `/api/*` never falls through to HTML. Production uses one API replica and a durable `/data` volume while SQLite is authoritative.
+The Vite build targets ES2022. Axum serves hashed assets and uses an SPA fallback for known frontend routes; `/api/*` never falls through to HTML. M1 production supports three replicas because demo records and quota buckets share a private Azure Blob container. Local only-`PORT` startup uses locked files under `/data`. Before M2 makes SQLite authoritative for tenant records, deployment must either select one writer replica with a durable volume or replace SQLite with a shared database.
 
 ### Repository layout
 
@@ -225,7 +226,7 @@ Checkout, activation, and verification have strict rate limits and idempotency. 
 
 ### Background work, files, and email
 
-- M1 runs an hourly demo purge; in-memory workspaces disappearing on restart is acceptable and honest.
+- M1 runs an hourly demo purge against shared Azure Blob storage in production and locked files locally.
 - M2 adds an in-process, lease-based worker for trial expiry, billing re-verification, and idempotency cleanup. Jobs are safe to repeat.
 - M3 adds approval/submission expiry and state-derived overdue marking.
 - M4 adds notification outbox retries, daily digest creation, audit retention, and SQLite online backups.
@@ -535,7 +536,7 @@ M5 supports a documented UTF-8 CSV template plus mappings for common generic col
 | External approval links can be forwarded | Unauthorized decisions create commercial disputes | Test expiry, named recipient context, single decision, revocation, and optional email challenge with five pilot clients. Add a challenge only if forwarding occurs or clients request it; never imply legal signature. | Product/security / M3 |
 | CIAM callback or claims may differ in production | Accounts could fail despite local fixtures | Register exact callback and run a production-tenant smoke before M2 PASS. If email is absent, UI still works because `oid` is identity and email is optional display data. | Operator / M2 |
 | Sociobot subscription webhook/plan contract is not in the attached one-time API skill | Billing may be stale or ambiguous | Use daily `/verify` as authority and a captured adapter fixture. Do not implement direct Dodo or trust unsigned callbacks. Escalate registry capability in handoff if named plan is absent. | Engineering/operator / M2 |
-| SQLite single-writer deployment may outgrow one replica | Locking or failover could hurt availability | Record busy time, write p95, size, and replica need. Trigger PostgreSQL migration at the thresholds in Architecture; repository contract and integration suite must pass unchanged. | Engineering / M4 operations |
+| Planned M2 SQLite conflicts with the current three-replica M1 topology | Tenant writes cannot safely use replica-local files | Before M2 deploys tenant storage, prove a one-writer durable-volume configuration or select PostgreSQL. Never reuse the shared demo blob documents as the tenant database. | Engineering / M2 architecture gate |
 | Demo creation can be abused | Anonymous state consumes memory/CPU | Load 5,000 TTL workspaces, enforce caps and purge, then attack provision/write limits. Require bounded memory and 429 with `Retry-After`; shorten TTL under pressure rather than touch tenant data. | Engineering / M1 |
 | Multi-currency agencies may reject single-currency jobs | Silent FX would make margins misleading | Ask all pilot agencies what fraction of jobs mix currencies. If over 20%, design explicit manual FX snapshots with source/date as a later milestone; never fetch or guess a live rate silently. | Product / after M3 |
 | Email delivery is not guaranteed without configured relay | Users may miss approvals or notices | Product always exposes in-app state and copyable links. Email is marked configured/unconfigured; no email-dependent claim ships until a relay fixture and deliverability smoke pass. | Operations / M3–M4 |
