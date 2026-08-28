@@ -1,10 +1,12 @@
 FROM node:22-bookworm-slim AS web-builder
+ARG BUILD_SHA=dev
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY index.html tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts ./
 COPY src ./src
-RUN npm run build
+COPY public ./public
+RUN VITE_BUILD_SHA="$BUILD_SHA" npm run build
 
 FROM rust:1.98-bookworm AS api-builder
 ARG BUILD_SHA=dev
@@ -29,4 +31,3 @@ ENV PORT=8080
 ENV STATIC_DIR=/app/dist
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]
-

@@ -6,9 +6,11 @@
 - Alias: `https://subcontractor-margin-chain.sociobot.in/?demo=1`; replace this URL with `/demo` after activation so refresh and sharing are predictable.
 - The landing page action is “Try it with sample data.” It enters the seeded register in one click and never opens sign-in.
 
+Local verification uses `http://127.0.0.1:8080/demo` after building the web app and starting the Rust server with `STATIC_DIR=dist`. The same-origin API is required; Vite-only preview is not the full demo.
+
 ## Isolation
 
-M1 creates an opaque, random demo workspace through `POST /api/v1/demo/workspaces`. Its identifier lives in an `HttpOnly`, `SameSite=Lax` cookie and expires after at most 24 hours. Demo routes use a dedicated `DemoStore`; they cannot call the signed-in tenant repository. The first implementation may hold these workspaces in process memory because restarts only shorten their life. Never copy a demo object into real data automatically.
+M1 creates an opaque, random demo workspace through `POST /api/v1/demo/workspaces`. Repeating that call with a valid cookie returns the current workspace without replacing it. Its identifier lives in an `HttpOnly`, `SameSite=Lax` cookie and expires after at most 24 hours. Demo routes use a dedicated in-process `DemoStore`; no signed-in tenant repository exists in M1. Server restarts only shorten the workspace lifetime. Never copy a demo object into real data automatically.
 
 `sessionStorage` may store presentation preferences under `smc:demo:v1:*`. It is not the record source. Production storage keys and API routes never load while the demo banner is present.
 
@@ -52,3 +54,4 @@ The persistent banner reads “Demo — sample data, nothing is saved” and off
 
 Every M1 claim starts in a new Playwright browser context and uses only `/demo` and these fixtures. Tests must prove reset invalidates the old workspace, demo requests stay under `/api/v1/demo/`, no CIAM or billing request occurs, and no signed-in tenant endpoint is requested.
 
+Run all desktop and 390px claim flows with `npm run test:e2e`. Run one claim with the exact command recorded in `.factory/claims.json`.

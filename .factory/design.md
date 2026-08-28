@@ -1,6 +1,6 @@
 # Design system: layered carbon-copy ledger
 
-Status: **approved for M1 implementation**  
+Status: **implemented in M1**
 Last updated: 2026-08-28
 
 ## Visual thesis
@@ -68,9 +68,11 @@ The physical rule is **lift, reveal, settle**. Opening a job lifts its top sheet
 
 ## Original visual assets and provenance
 
-M1 will include one hand-authored SVG ledger stack for the landing preview and social card. It will be drawn from product UI primitives: abstract ruled sheets, amount blocks, connector marks, and a margin stamp. It must contain no raster stock, logos, people, copied icon set, or machine-generated text. The same source composition produces a 1200×630 Open Graph image and the designed 404 torn-sheet motif.
+M1 includes one hand-authored SVG ledger stack for the landing preview and social card. It is drawn from product UI primitives: abstract ruled sheets, amount blocks, connector marks, and a margin stamp. It contains no raster stock, logos, people, copied icon set, or machine-generated text. The same composition produces a 1200×630 Open Graph image and the designed 404 torn-sheet motif.
 
-Provenance record: concept and geometry specified by Param Factory for this product on 2026-08-28; implementation will be original repository-authored SVG/CSS. No generated imagery is required. If a later milestone introduces generated imagery, record the model, prompt, date, edits, and license here before shipping. Footer copy should say “Illustration made for Subcontractor Margin Chain” only if imagery beyond interface geometry is added.
+Provenance record: concept and geometry specified by Param Factory for this product on 2026-08-28; implementation is original repository-authored SVG/CSS. No generated imagery was required. If a later milestone introduces generated imagery, record the model, prompt, date, edits, and license here before shipping. Footer copy should say “Illustration made for Subcontractor Margin Chain” only if imagery beyond interface geometry is added.
+
+M1 implementation record, 2026-08-28: the ledger stack is hand-authored in `src/routes/LandingPage.tsx`; `public/og-card.svg`, `public/favicon.svg`, and `public/apple-touch-icon.svg` derive from the same geometry. No model, stock image, copied icon, logo, or external asset was used. Newsreader 600 and Recursive 400/700 Latin WOFF2 files are bundled by Vite from Fontsource 5.2.6. Both font projects use the SIL Open Font License 1.1; the repository notice is `public/fonts/OFL.txt`.
 
 ## Five key screens, sketched in words
 
@@ -120,4 +122,3 @@ Settings use plain ruled lists. Each person row states role and financial visibi
 - **Offline:** the demo explains that unsent edits remain in the demo namespace; signed-in work is read-only until the API returns unless an offline mutation queue has been proven.
 - **Permission denied:** name the hidden category without leaking values: “Your role cannot view subcontractor rates. Ask an owner or finance member.”
 - **At risk:** state the amount and cause, not only “warning”: “Expected margin is $1,250 below this job’s floor after the design revision.”
-

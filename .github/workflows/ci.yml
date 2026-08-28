@@ -27,4 +27,5 @@ jobs:
       - run: npm run build
       - run: cargo test --manifest-path server/Cargo.toml --locked
       - run: cargo build --manifest-path server/Cargo.toml --release --locked
-
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
