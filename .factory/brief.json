@@ -1,6 +1,7 @@
 {
   "slug": "subcontractor-margin-chain",
   "title": "Subcontractor Margin Chain",
+  "summary": "Protect agency job margins by linking client commitments, subcontractor costs, approvals, and invoices.",
   "territory": "utilities",
   "user": "Boutique agencies that deliver through freelancers and subcontractors but need to see end-client commitments, subcontractor cost, approval, and invoice status in one job chain. Paying customer: agency owner; wedge: job-level margin protection at $79/month.",
   "evidence": [
@@ -27,5 +28,6 @@
   "scale": "venture",
   "why_distinct": "The central object is a commercial delivery chain, not a generic task board or freelancer marketplace.",
   "confidence": 4,
-  "state": "RESEARCHED"
+  "state": "ADMITTED",
+  "admitted_at": "2026-08-28T18:07:41Z"
 }

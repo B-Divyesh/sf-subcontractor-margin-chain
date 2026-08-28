@@ -1,0 +1,45 @@
+[
+  {
+    "id": "m1-chain-math",
+    "claim": "Shows client commitment, committed subcontractor cost, and expected margin in one job chain",
+    "where": "landing live preview, demo margin slip, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-chain-math",
+    "sandbox": "fresh browser context at /demo; open Autumn launch films; assert $24,000 - $14,500 = $9,500 and 39.6%"
+  },
+  {
+    "id": "m1-margin-risk",
+    "claim": "Warns when committed cost puts expected margin below the job's floor",
+    "where": "landing product preview, demo job register, demo margin slip, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-margin-risk",
+    "sandbox": "fresh /demo workspace; add a $6,000 commitment to Autumn launch films; assert the written alert identifies the new commitment and says margin is $1,300 below the 20% floor"
+  },
+  {
+    "id": "m1-linked-status",
+    "claim": "Keeps scope approval and client invoice status beside the same job",
+    "where": "landing how-it-works section, demo chain workspace",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-linked-status",
+    "sandbox": "fresh /demo workspace; approve the pending scope revision and mark its linked client milestone sent; reload and assert both states remain on that demo job"
+  },
+  {
+    "id": "m1-demo-no-account",
+    "claim": "The sample demo needs no account",
+    "where": "landing first-screen facts, demo banner, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-demo-no-account",
+    "sandbox": "fresh browser context; open /?demo=1; assert a seeded job register is usable without redirecting to CIAM or showing an account gate"
+  },
+  {
+    "id": "m1-demo-reset",
+    "claim": "Demo changes are discarded when the sample is reset",
+    "where": "landing first-screen facts, demo banner, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-demo-reset",
+    "sandbox": "fresh /demo workspace; change a commitment; choose Reset demo and confirm; assert original sample values return and the prior demo workspace identifier is no longer accepted"
+  },
+  {
+    "id": "m1-plan-prices",
+    "claim": "Studio costs $79 per agency each month and Portfolio costs $159 per agency each month",
+    "where": "landing pricing section",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-plan-prices",
+    "sandbox": "fresh landing page; assert both named monthly prices and their active-job limits are visible, and no purchase action is shown before M2 billing ships"
+  }
+]
+
