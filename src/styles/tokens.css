@@ -1,0 +1,67 @@
+:root {
+  color-scheme: light;
+
+  /* Layered carbon-copy ledger palette. */
+  --color-canvas: #eee7d8;
+  --color-paper: #fffdf7;
+  --color-paper-blue: #d8edf0;
+  --color-paper-red: #f0dcd5;
+  --color-ink: #1d2925;
+  --color-ink-muted: #58625b;
+  --color-carbon: #0b5f69;
+  --color-carbon-hover: #084c54;
+  --color-carbon-contrast: #fffdf7;
+  --color-rule: #837b6e;
+  --color-success: #32613e;
+  --color-warning: #765000;
+  --color-danger: #9d3528;
+  --color-focus: #007f8d;
+  --color-scrim: rgb(29 41 37 / 64%);
+
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "Recursive", "Arial Narrow", Arial, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-body: 1rem;
+  --font-size-lead: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+  --font-size-title: clamp(2.25rem, 1.7rem + 2.5vw, 4.5rem);
+  --line-compact: 1.15;
+  --line-body: 1.55;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  --radius-control: 0.25rem;
+  --radius-sheet: 0.375rem;
+  --border-hairline: 1px;
+  --border-strong: 2px;
+  --shadow-sheet-blue: 6px 7px 0 #9ccbd0;
+  --shadow-sheet-red: 12px 14px 0 #d7a99d;
+
+  --duration-fast: 120ms;
+  --duration-standard: 180ms;
+  --duration-sheet: 240ms;
+  --ease-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --measure-copy: 68ch;
+  --measure-form: 42rem;
+  --content-max: 75rem;
+  --control-min: 2.75rem;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-standard: 0ms;
+    --duration-sheet: 0ms;
+  }
+}
+

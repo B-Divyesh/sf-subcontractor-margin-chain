@@ -1,6 +1,16 @@
 node_modules/
 dist/
+coverage/
+playwright-report/
+test-results/
+server/target/
 .env
 *.log
 graphify-out/
 .DS_Store
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+*.tsbuildinfo
