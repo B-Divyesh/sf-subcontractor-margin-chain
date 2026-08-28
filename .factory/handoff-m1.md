@@ -39,7 +39,7 @@ The plan remains correct, so its milestone boundaries were not changed. Its top-
 - Load smoke: 1,000 requests at a target 100 requests/second over 10 seconds; 354 accepted and 646 deliberately limited with 429; overall p95 response time 96ms.
 - Factory ACR build completed successfully. The Azure Container App started from only `PORT=8080`; `/health` returned the injected source SHA.
 - Factory live verifier: HTTPS 200, cold load 641ms, zero console/page errors, title and `lang` present, one `<h1>`, one `<main>`, no missing image alt, and no unlabeled buttons.
-- The deployed image reports build `25fff52e75a07df349bc0a954e79b924156c0ff2` from `/health`. The Container App is pinned to one replica, matching the M1 process-local `DemoStore` architecture.
+- `/health` reports the injected source commit. The Container App is pinned to one replica, matching the M1 process-local `DemoStore` architecture.
 - Live desktop and mobile evidence is under `.factory/evidence/m1-live/`.
 
 The local worker image had no Docker-compatible runtime, so `docker build` could not run locally. The required Dockerfile build was instead exercised by the successful Azure Container Registry build used for deployment.
