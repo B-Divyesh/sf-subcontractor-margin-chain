@@ -5,7 +5,7 @@ Product: `subcontractor-margin-chain`
 Artifact: web with backend  
 Production URL: `https://subcontractor-margin-chain.sociobot.in`  
 Plan date: 2026-08-28  
-Status: **M1 built and verified; awaiting milestone review**
+Status: **M1 deployed and verified; awaiting milestone review**
 
 This plan is the build contract. A milestone builder reads this file, `.factory/design.md`, `.factory/demo.md`, `.factory/claims.json`, all prior handoffs, and the latest review notes before changing code. A milestone is not complete until its claims, tests, and definition of done pass from a clean checkout. Review and polish must pass before the next milestone begins.
 
@@ -315,7 +315,7 @@ The landing order is header → first screen → live product preview → three 
 
 ### M1 — Prove the margin chain in a one-click demo
 
-Status: **built and locally verified; awaiting review → polish**
+Status: **deployed and verified; awaiting review → polish**
 User outcome: a stranger opens realistic sample jobs, creates or changes a chain, sees deterministic margin risk, links approval and invoice state, and resets the sandbox without an account.
 
 #### Routes and screens added
