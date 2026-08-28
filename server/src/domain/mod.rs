@@ -219,15 +219,15 @@ mod tests {
     #[test]
     fn rounds_margin_floor_up_to_a_minor_unit() {
         assert_eq!(conservative_floor(10_001, 2_500), 2_501);
-        assert_eq!(conservative_floor(24_000_00, 2_000), 4_800_00);
+        assert_eq!(conservative_floor(2_400_000, 2_000), 480_000);
     }
 
     #[test]
     fn exact_fixture_math_uses_integer_minor_units() {
-        let result = chain(Some(24_000_00), 14_500_00, 2_000).calculation();
-        assert_eq!(result.expected_margin_minor, Some(9_500_00));
+        let result = chain(Some(2_400_000), 1_450_000, 2_000).calculation();
+        assert_eq!(result.expected_margin_minor, Some(950_000));
         assert_eq!(result.margin_percent_tenths, Some(396));
-        assert_eq!(result.margin_floor_minor, Some(4_800_00));
+        assert_eq!(result.margin_floor_minor, Some(480_000));
     }
 
     #[test]

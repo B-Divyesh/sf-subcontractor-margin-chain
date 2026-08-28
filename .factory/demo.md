@@ -10,11 +10,11 @@ Local verification uses `http://127.0.0.1:8080/demo` after building the web app 
 
 ## Isolation
 
-M1 creates an opaque, random demo workspace through `POST /api/v1/demo/workspaces`. Repeating that call with a valid cookie returns the current workspace without replacing it. Its identifier lives in an `HttpOnly`, `SameSite=Lax` cookie and expires after at most 24 hours. Demo routes use a dedicated in-process `DemoStore`; no signed-in tenant repository exists in M1. Server restarts only shorten the workspace lifetime. Never copy a demo object into real data automatically.
+M1 creates an opaque, random demo workspace through `POST /api/v1/demo/workspaces`. Repeating that call with a valid cookie returns the current workspace without replacing it. Its identifier lives in an `HttpOnly`, `SameSite=Lax`, `Secure` cookie on HTTPS and expires after at most 24 hours. Production uses a private Azure Blob container through the Container App managed identity, so every replica reads the same durable workspace. Local containers use `/data/demo-workspaces`. No signed-in tenant repository exists in M1. Never copy a demo object into real data automatically.
 
 `sessionStorage` may store presentation preferences under `smc:demo:v1:*`. It is not the record source. Production storage keys and API routes never load while the demo banner is present.
 
-Every demo response carries `Cache-Control: no-store`. Demo endpoints have stricter IP and workspace rate limits. Logs contain a one-way workspace digest, never client names or money values.
+Every demo response, including errors, carries `Cache-Control: no-store`. Demo endpoints have stricter IP and workspace rate limits. Logs do not contain client names or money values.
 
 ## Seeded agency and jobs
 

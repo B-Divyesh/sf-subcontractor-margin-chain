@@ -1,5 +1,5 @@
 use crate::{
-    demo::{AppState, IdempotentResult, NewChain, WorkspaceCreated},
+    demo::{AppState, IdempotentResult, NewChain, StoreError, WorkspaceCreated},
     domain::{
         new_id, CostCommitment, CostState, JobChain, MarginCalculation, MilestoneStatus,
         ScopeStatus,
@@ -14,6 +14,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 const COOKIE_NAME: &str = "smc_demo";
@@ -116,6 +117,9 @@ impl IntoResponse for ApiError {
             header::CONTENT_TYPE,
             HeaderValue::from_static("application/problem+json"),
         );
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
         response.headers_mut().insert(
             HeaderName::from_static("x-request-id"),
             HeaderValue::from_str(&request_id)
@@ -133,7 +137,13 @@ impl IntoResponse for ApiError {
 }
 
 pub fn health_router() -> Router<AppState> {
-    Router::new().route("/health", get(health))
+    Router::new()
+        .route("/health", get(health))
+        .route("/ready", get(ready))
+}
+
+pub fn operations_router() -> Router<AppState> {
+    Router::new().route("/internal/metrics", get(metrics))
 }
 
 pub fn api_router() -> Router<AppState> {
@@ -178,12 +188,48 @@ async fn health() -> Json<HealthResponse> {
     })
 }
 
+async fn ready(State(state): State<AppState>) -> Response {
+    if state.demo.ready().await {
+        (
+            StatusCode::OK,
+            Json(serde_json::json!({"status":"ready","demo_store":state.demo.backend_name()})),
+        )
+            .into_response()
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({"status":"not_ready","demo_store":state.demo.backend_name()})),
+        )
+            .into_response()
+    }
+}
+
+async fn metrics(State(state): State<AppState>) -> Response {
+    let requests = state.metrics.requests.load(Ordering::Relaxed);
+    (
+        [(header::CONTENT_TYPE, "text/plain; version=0.0.4; charset=utf-8")],
+        format!(
+            "# HELP smc_http_requests_total Requests served by this replica.\n# TYPE smc_http_requests_total counter\nsmc_http_requests_total {requests}\n# HELP smc_demo_store_ready Shared demo persistence readiness.\n# TYPE smc_demo_store_ready gauge\nsmc_demo_store_ready {}\n",
+            u8::from(state.demo.ready().await)
+        ),
+    ).into_response()
+}
+
+pub async fn count_request(
+    State(state): State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    state.metrics.requests.fetch_add(1, Ordering::Relaxed);
+    next.run(request).await
+}
+
 async fn create_workspace(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
     if let Ok(existing_id) = workspace_id(&headers) {
-        if let Some(existing) = state.demo.get(&existing_id) {
+        if let Some(existing) = state.demo.get(&existing_id).await.map_err(store_error)? {
             let mut response = Json(WorkspaceCreated {
                 expires_at: existing.expires_at_epoch_seconds,
             })
@@ -197,10 +243,13 @@ async fn create_workspace(
         .rate_limits
         .check(&format!("provision:{ip}"), 5, Duration::from_secs(60 * 60))
         .map_err(ApiError::rate_limited)?;
-    let (workspace_id, created) = state.demo.create();
+    let (workspace_id, created) = state.demo.create().await.map_err(store_error)?;
     let mut response = (StatusCode::CREATED, Json(created)).into_response();
-    let cookie =
-        format!("{COOKIE_NAME}={workspace_id}; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax");
+    let secure = forwarded_https(&headers);
+    let cookie = format!(
+        "{COOKIE_NAME}={workspace_id}; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax{}",
+        if secure { "; Secure" } else { "" }
+    );
     response.headers_mut().insert(
         header::SET_COOKIE,
         HeaderValue::from_str(&cookie).expect("workspace cookie is valid"),
@@ -215,13 +264,23 @@ async fn delete_workspace(
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
     check_demo_write(&state, &headers, &workspace_id)?;
-    if !state.demo.remove(&workspace_id) {
+    if !state
+        .demo
+        .remove(&workspace_id)
+        .await
+        .map_err(store_error)?
+    {
         return Err(missing_workspace());
     }
     let mut response = StatusCode::NO_CONTENT.into_response();
+    let secure = forwarded_https(&headers);
     response.headers_mut().insert(
         header::SET_COOKIE,
-        HeaderValue::from_static("smc_demo=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax"),
+        HeaderValue::from_str(&format!(
+            "smc_demo=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax{}",
+            if secure { "; Secure" } else { "" }
+        ))
+        .expect("expired workspace cookie is valid"),
     );
     demo_no_store(&mut response);
     Ok(response)
@@ -235,6 +294,8 @@ async fn list_chains(
     let workspace = state
         .demo
         .get(&workspace_id)
+        .await
+        .map_err(store_error)?
         .ok_or_else(missing_workspace)?;
     let mut chains: Vec<JobView> = workspace.chains.into_iter().map(JobView::from).collect();
     chains.sort_by_key(|chain| match chain.calculation.risk_state {
@@ -257,6 +318,8 @@ async fn get_chain(
     let workspace = state
         .demo
         .get(&workspace_id)
+        .await
+        .map_err(store_error)?
         .ok_or_else(missing_workspace)?;
     let chain = workspace
         .chains
@@ -292,13 +355,15 @@ async fn create_chain(
             if let Some(IdempotentResult::Chain(chain)) = workspace.idempotency.get(&key) {
                 return (StatusCode::OK, chain.clone());
             }
-            let chain = input.into_chain();
+            let chain = input.clone().into_chain();
             workspace.chains.push(chain.clone());
             workspace
                 .idempotency
-                .insert(key, IdempotentResult::Chain(chain.clone()));
+                .insert(key.clone(), IdempotentResult::Chain(chain.clone()));
             (StatusCode::CREATED, chain)
         })
+        .await
+        .map_err(store_error)?
         .ok_or_else(missing_workspace)?;
     let mut response = (result.0, Json(JobView::from(result.1))).into_response();
     demo_no_store(&mut response);
@@ -369,6 +434,8 @@ async fn update_chain(
             chain.version += 1;
             Some(chain.clone())
         })
+        .await
+        .map_err(store_error)?
         .ok_or_else(missing_workspace)?
         .ok_or_else(missing_chain)?;
     let mut response = Json(JobView::from(result)).into_response();
@@ -410,7 +477,7 @@ async fn add_cost(
         )
         .field("role"));
     }
-    if input.amount_minor < 0 || input.amount_minor > 100_000_000_00 {
+    if input.amount_minor < 0 || input.amount_minor > 10_000_000_000 {
         return Err(ApiError::new(
             StatusCode::UNPROCESSABLE_ENTITY,
             "invalid_money",
@@ -442,9 +509,11 @@ async fn add_cost(
             let chain = chain.clone();
             workspace
                 .idempotency
-                .insert(key, IdempotentResult::Chain(chain.clone()));
+                .insert(key.clone(), IdempotentResult::Chain(chain.clone()));
             Some((StatusCode::CREATED, chain))
         })
+        .await
+        .map_err(store_error)?
         .ok_or_else(missing_workspace)?
         .ok_or_else(missing_chain)?;
     let mut response = (result.0, Json(JobView::from(result.1))).into_response();
@@ -485,6 +554,8 @@ async fn update_scope(
             chain.version += 1;
             Some(chain.clone())
         })
+        .await
+        .map_err(store_error)?
         .ok_or_else(missing_workspace)?
         .ok_or_else(|| missing_record("scope_not_found", "Scope revision not found"))?;
     let mut response = Json(JobView::from(result)).into_response();
@@ -528,6 +599,8 @@ async fn update_milestone(
             chain.version += 1;
             Some(Ok(chain.clone()))
         })
+        .await
+        .map_err(store_error)?
         .ok_or_else(missing_workspace)?
         .ok_or_else(|| missing_record("milestone_not_found", "Client milestone not found"))??;
     let mut response = Json(JobView::from(result)).into_response();
@@ -597,6 +670,24 @@ fn client_ip(headers: &HeaderMap) -> String {
         .chars()
         .take(64)
         .collect()
+}
+
+fn forwarded_https(headers: &HeaderMap) -> bool {
+    headers
+        .get("x-forwarded-proto")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(',').next())
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("https"))
+}
+
+fn store_error(error: StoreError) -> ApiError {
+    tracing::error!(?error, "demo persistence unavailable");
+    ApiError::new(
+        StatusCode::SERVICE_UNAVAILABLE,
+        "demo_store_unavailable",
+        "Demo temporarily unavailable",
+        "The shared demo store could not be reached. Wait a moment, then try again.",
+    )
 }
 
 fn missing_workspace() -> ApiError {

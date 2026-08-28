@@ -18,5 +18,6 @@ export default defineConfig({
     command: "VITE_BUILD_SHA=0123456789abcdef0123456789abcdef01234567 npm run build && PORT=4173 STATIC_DIR=dist cargo run --manifest-path server/Cargo.toml --locked",
     port: 4173,
     reuseExistingServer: !process.env.CI,
+    timeout: 300_000,
   },
 });

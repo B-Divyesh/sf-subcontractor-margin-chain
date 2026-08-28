@@ -27,16 +27,15 @@ Audited: 2026-08-28 from `src/routes/LandingPage.tsx` and the shared footer. Wor
 | Step copy | See the change that puts margin at risk, then fix it before invoicing. | 13 | Pass |
 | Limits heading | A commercial record, not another project manager. | 7 | Pass |
 | Privacy | Your demo workspace is isolated and expires within 24 hours. | 10 | Pass |
-| Future privacy | Subcontractor rates stay behind role-based access after sign-in. | 9 | Pass |
+| Demo guidance | The sample uses fictional names and values. | 7 | Pass |
+| Demo guidance | Do not enter client data. | 5 | Pass |
 | Limit | We do not calculate payroll tax or decide worker status. | 10 | Pass |
 | Pricing heading | Price by active work, not seats. | 6 | Pass |
 | Billing note | Accounts and checkout arrive in the next milestone. | 8 | Pass |
 | Studio price | $79 per agency each month | 5 | Pass |
 | Studio allowance | Keep up to 25 job chains active. | 7 | Pass |
-| Studio inclusion | Unlimited internal members and archived jobs are included. | 8 | Pass |
 | Portfolio price | $159 per agency each month | 5 | Pass |
 | Portfolio allowance | Keep up to 100 job chains active. | 7 | Pass |
-| Portfolio inclusion | Includes integration webhooks and priority exports. | 6 | Pass |
 | Footer | Keep the client promise, subcontractor cost, and margin in one job chain. | 12 | Pass |
 
 No sentence exceeds 22 words. No rendered sentence contains: leverage, seamless, effortless, robust, powerful, intuitive, reimagine, supercharge, unlock, delightful, journey, ecosystem, or AI-powered.

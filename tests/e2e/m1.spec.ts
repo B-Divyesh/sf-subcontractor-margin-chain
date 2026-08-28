@@ -76,6 +76,43 @@ test("@claim:m1-demo-reset discards changes and invalidates the old workspace", 
   await oldWorkspace.dispose();
 });
 
+test("@claim:m1-demo-isolation-expiry isolates workspaces for no more than 24 hours", async ({ baseURL }) => {
+  const first = await request.newContext({ baseURL, extraHTTPHeaders: { "X-Forwarded-For": "203.0.116.41" } });
+  const second = await request.newContext({ baseURL, extraHTTPHeaders: { "X-Forwarded-For": "203.0.116.42" } });
+  const before = Math.floor(Date.now() / 1000);
+  const firstCreated = await first.post("/api/v1/demo/workspaces");
+  const secondCreated = await second.post("/api/v1/demo/workspaces");
+  expect(firstCreated.status()).toBe(201);
+  expect(secondCreated.status()).toBe(201);
+  const expiry = (await firstCreated.json()).expires_at as number;
+  expect(expiry).toBeGreaterThan(before);
+  expect(expiry).toBeLessThanOrEqual(before + 24 * 60 * 60);
+
+  const changed = await first.post("/api/v1/demo/chains/autumn-launch-films/costs", {
+    headers: { "Idempotency-Key": "isolation-cost-change" },
+    data: { subcontractor: "Mara Bell", role: "Location sound mix", amount_minor: 600000 },
+  });
+  expect(changed.status()).toBe(201);
+  const untouched = await second.get("/api/v1/demo/chains/autumn-launch-films");
+  expect(untouched.status()).toBe(200);
+  expect((await untouched.json()).calculation.expected_margin_minor).toBe(950000);
+  await first.dispose();
+  await second.dispose();
+});
+
+test("@claim:m1-public-privacy keeps the public and demo flow on this origin", async ({ page }) => {
+  const origins = new Set<string>();
+  page.on("request", (request) => origins.add(new URL(request.url()).origin));
+  await page.goto("/");
+  await page.getByRole("link", { name: "Try it with sample data" }).click();
+  await page.getByRole("link", { name: "Autumn launch films" }).click();
+  await page.getByRole("textbox", { name: "Subcontractor", exact: true }).fill("Mara Bell");
+  await page.getByLabel("Work covered").fill("Location sound mix");
+  await page.getByLabel("Amount in USD").fill("1");
+  await page.getByRole("button", { name: "Add commitment" }).click();
+  expect([...origins]).toEqual([new URL(page.url()).origin]);
+});
+
 test("@claim:m1-plan-prices shows exact plans without a pre-M2 purchase action", async ({ page }) => {
   await page.goto("/");
   const pricing = page.locator("#pricing");

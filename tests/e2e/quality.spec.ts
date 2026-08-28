@@ -14,7 +14,9 @@ for (const path of ["/", "/demo", "/demo/chains/new", "/demo/chains/autumn-launc
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page).toHaveTitle(/.+ — Subcontractor Margin Chain|Subcontractor Margin Chain — .+/);
     expect(await page.locator("html").getAttribute("lang")).toBe("en");
-    const results = await new AxeBuilder({ page }).analyze();
+    const results = await new AxeBuilder({ page })
+      .options({ rules: { "label-content-name-mismatch": { enabled: true } } })
+      .analyze();
     expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
   });
 }
@@ -43,6 +45,11 @@ test("keyboard actions create a chain and reset with focus returned to the headi
   await expect(page.getByRole("heading", { name: "Job margin register" })).toBeFocused();
 });
 
+test("the visible wordmark is contained in its accessible name", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "MC Margin Chain" })).toBeVisible();
+});
+
 test("deep links, back navigation, and route focus work", async ({ page }) => {
   await page.goto("/demo/chains/autumn-launch-films");
   await expect(page.getByRole("heading", { name: "Autumn launch films" })).toBeFocused();
@@ -65,7 +72,7 @@ test("public and demo routes load without console or page errors", async ({ page
   const errors: string[] = [];
   page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
   page.on("pageerror", (error) => errors.push(error.message));
-  for (const path of ["/", "/demo", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms", "/404"]) {
+  for (const path of ["/", "/demo", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
   }

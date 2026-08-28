@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "check": "npm test && npm run build && cargo test --manifest-path server/Cargo.toml --locked"
+    "lint": "cargo fmt --manifest-path server/Cargo.toml -- --check && cargo clippy --manifest-path server/Cargo.toml --all-targets --locked -- -D warnings",
+    "check": "npm test && npm run build && npm run lint && cargo test --manifest-path server/Cargo.toml --locked"
   },
   "dependencies": {
     "@azure/msal-browser": "^4.24.0",

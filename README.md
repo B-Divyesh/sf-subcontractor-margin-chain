@@ -18,10 +18,10 @@ Accounts, real agency storage, team roles, and hosted checkout are M2 work. M1 d
 
 - React 19, React Router, strict TypeScript, and Vite
 - Rust 2021, axum, and tokio
-- An in-process `DemoStore` with random HttpOnly workspace cookies and a 24-hour maximum lifetime
+- A shared Azure Blob demo store in production, with durable filesystem storage for local containers
 - One multi-stage container that serves the JSON API and built web assets on `PORT`
 
-The server starts with only `PORT` or with no environment variables. It sends security headers, accepts same-origin API calls, limits every API route except `/health`, and uses the first `X-Forwarded-For` address behind factory ingress.
+The server needs only `PORT`, which defaults to 8080. Production selects shared storage through its managed identity; local containers use `/data`. Health, readiness, and Prometheus metrics are available at `/health`, `/ready`, and `/internal/metrics`.
 
 ## Run locally
 
@@ -40,19 +40,20 @@ Then open `http://127.0.0.1:8080/demo`. Vite-only development does not provide t
 ```sh
 npm test
 npm run build
+npm run lint
 cargo test --manifest-path server/Cargo.toml --locked
 cargo build --manifest-path server/Cargo.toml --release --locked
 npm run test:e2e
 npm run check
 ```
 
-Playwright 1.58.2 runs every claim on desktop Chromium and a 390px Chromium profile. It also checks keyboard flows, route focus, deep links, 200% text zoom, console errors, internal links, and serious or critical axe findings.
+Playwright 1.58.2 runs every claim on desktop Chromium and a 390px Chromium profile. It also checks keyboard flows, route focus, deep links, 200% text zoom, console errors, internal links, and current serious or critical axe findings.
 
 Each public claim and its exact command is listed in [`.factory/claims.json`](.factory/claims.json). Demo fixtures, reset behavior, and the storage boundary are in [`.factory/demo.md`](.factory/demo.md).
 
 ## API
 
-The M1 routes are under `/api/v1/demo/`. Create operations require an `Idempotency-Key`. Errors use `application/problem+json`. Demo responses use `Cache-Control: no-store`.
+The M1 routes are under `/api/v1/demo/`. Create operations require an `Idempotency-Key`. Errors use `application/problem+json`. Every demo response uses `Cache-Control: no-store`.
 
 The server stores money as signed integer cents and calculates the floor with conservative upward rounding. It never uses a binary floating-point value as the authoritative money amount.
 

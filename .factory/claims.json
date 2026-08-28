@@ -40,6 +40,82 @@
     "where": "landing pricing section",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-plan-prices",
     "sandbox": "fresh landing page; assert both named monthly prices and their active-job limits are visible, and no purchase action is shown before M2 billing ships"
+  },
+  {
+    "id": "m1-demo-isolation-expiry",
+    "claim": "Each demo workspace is isolated and expires within 24 hours",
+    "where": "landing limits, privacy, terms, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-demo-isolation-expiry",
+    "sandbox": "create two fresh API contexts; mutate one workspace; assert the other remains unchanged and the issued expiry is no more than 24 hours"
+  },
+  {
+    "id": "m1-public-privacy",
+    "claim": "The public site has no analytics, remote fonts, third-party scripts, or advertising",
+    "where": "privacy page, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-public-privacy",
+    "sandbox": "record every request through a landing-to-demo mutation flow and assert the product origin is the only origin"
+  },
+  {
+    "id": "m1-demo-cookie",
+    "claim": "A host-only HttpOnly cookie identifies the demo workspace and is Secure on HTTPS",
+    "where": "privacy page, demo contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api claim_demo_cookie_is_scoped_and_secure_on_https --locked",
+    "sandbox": "provision through a simulated HTTPS ingress and assert Secure, HttpOnly, SameSite=Lax, and no Domain attribute"
+  },
+  {
+    "id": "m1-shared-replica-persistence",
+    "claim": "Demo workspaces persist across application replicas",
+    "where": "README, demo contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api workspace_survives_replica_handoff_in_shared_persistence --locked",
+    "sandbox": "two independent application states use the same durable store; create on one, read and mutate on the other, then read the change on the first"
+  },
+  {
+    "id": "m1-port-only-startup",
+    "claim": "The server starts with only PORT and defaults to port 8080",
+    "where": "README",
+    "test": "cargo test --manifest-path server/Cargo.toml --test runtime_contract claim_runtime_starts_with_only_port --locked",
+    "sandbox": "spawn the compiled server with a cleared environment and only PORT, then assert /health returns 200"
+  },
+  {
+    "id": "m1-security-headers",
+    "claim": "Web responses include the product security-header policy",
+    "where": "factory product contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --test health claim_security_headers_are_sent --locked",
+    "sandbox": "request the landing page and assert CSP, HSTS, MIME, referrer, permissions, and frame protections"
+  },
+  {
+    "id": "m1-api-rate-limits",
+    "claim": "Demo API routes enforce request limits using the ingress client address",
+    "where": "demo contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api global_and_provision_limits_use_forwarded_ip_and_send_retry_after --locked",
+    "sandbox": "exceed provisioning and global API allowances with X-Forwarded-For; assert 429 and Retry-After"
+  },
+  {
+    "id": "m1-demo-no-store",
+    "claim": "Every demo API response, including errors, uses Cache-Control: no-store",
+    "where": "README, demo contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api invalid_requests_are_bounded_and_return_problem_details --locked",
+    "sandbox": "assert a successful demo response and an invalid demo error response both carry no-store"
+  },
+  {
+    "id": "m1-true-404",
+    "claim": "Unknown page addresses return HTTP 404",
+    "where": "routing contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --test health claim_unknown_routes_return_true_404 --locked",
+    "sandbox": "request an unknown path and assert the HTTP status is 404"
+  },
+  {
+    "id": "m1-asset-cache",
+    "claim": "Hashed production assets use immutable caching",
+    "where": "performance contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --test health claim_hashed_assets_are_cached_immutably --locked",
+    "sandbox": "request a hashed asset and assert a one-year immutable Cache-Control policy"
+  },
+  {
+    "id": "m1-operations",
+    "claim": "The service exposes JSON readiness and Prometheus metrics endpoints",
+    "where": "README",
+    "test": "cargo test --manifest-path server/Cargo.toml --test health claim_operational_endpoints_return_readiness_and_metrics --locked",
+    "sandbox": "assert /ready returns JSON 200 and /internal/metrics returns Prometheus text"
   }
 ]
-

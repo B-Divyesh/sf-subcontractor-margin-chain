@@ -87,7 +87,7 @@ export function LandingPage() {
         </div>
         <ul className="ruled-list">
           <li>Your demo workspace is isolated and expires within 24 hours.</li>
-          <li>Subcontractor rates stay behind role-based access after sign-in.</li>
+          <li>The sample uses fictional names and values. Do not enter client data.</li>
           <li>We do not calculate payroll tax or decide worker status.</li>
         </ul>
       </section>
@@ -103,13 +103,11 @@ export function LandingPage() {
             <h3>Studio</h3>
             <p className="price"><strong>$79</strong> per agency each month</p>
             <p>Keep up to 25 job chains active.</p>
-            <p>Unlimited internal members and archived jobs are included.</p>
           </article>
           <article>
             <h3>Portfolio</h3>
             <p className="price"><strong>$159</strong> per agency each month</p>
             <p>Keep up to 100 job chains active.</p>
-            <p>Includes integration webhooks and priority exports.</p>
           </article>
         </div>
       </section>

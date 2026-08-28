@@ -82,8 +82,8 @@ export function AppFrame() {
       <a className="skip-link" href="#main">Skip to main content</a>
       <header className="site-header">
         <div className="site-header__inner">
-          <Link className="wordmark" to="/" aria-label="Subcontractor Margin Chain home">
-            <span aria-hidden="true" className="wordmark__mark">MC</span>
+          <Link className="wordmark" to="/">
+            <span className="wordmark__mark">MC</span>
             <span>Margin Chain</span>
           </Link>
           <nav aria-label="Main navigation">

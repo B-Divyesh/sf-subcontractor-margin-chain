@@ -8,7 +8,7 @@ COPY src ./src
 COPY public ./public
 RUN VITE_BUILD_SHA="$BUILD_SHA" npm run build
 
-FROM rust:1.98-bookworm AS api-builder
+FROM rust:1-slim AS api-builder
 ARG BUILD_SHA=dev
 WORKDIR /src
 COPY server/Cargo.toml server/Cargo.lock ./server/
@@ -25,7 +25,8 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=api-builder /src/server/target/release/subcontractor-margin-chain-server /app/server
 COPY --from=web-builder /src/dist /app/dist
-RUN chown -R app:app /app
+RUN mkdir -p /data/demo-workspaces \
+    && chown -R app:app /app /data
 USER app
 ENV PORT=8080
 ENV STATIC_DIR=/app/dist

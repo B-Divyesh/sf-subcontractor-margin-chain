@@ -8,7 +8,7 @@ export function PrivacyPage() {
       <p className="lead">The public site does not track you. The demo keeps only its isolated sample workspace.</p>
       <section>
         <h2>What the demo stores</h2>
-        <p>The server creates a random demo workspace when you open the sample. It stores your sample edits in memory for up to 24 hours.</p>
+        <p>The server creates a random demo workspace when you open the sample. It stores sample edits in shared storage for up to 24 hours.</p>
         <p>An HttpOnly cookie identifies that workspace. The cookie cannot identify you outside this product.</p>
       </section>
       <section>
@@ -17,7 +17,7 @@ export function PrivacyPage() {
       </section>
       <section>
         <h2>How to remove demo data</h2>
-        <p>Choose “Reset demo” to destroy the current workspace. Server restarts and the 24-hour expiry also remove it.</p>
+        <p>Choose “Reset demo” to destroy the current workspace. The 24-hour expiry also removes it.</p>
       </section>
       <section>
         <h2>Questions</h2>
@@ -40,7 +40,7 @@ export function TermsPage() {
       </section>
       <section>
         <h2>Your sample edits are temporary</h2>
-        <p>Demo workspaces expire within 24 hours and may disappear sooner during a server restart. Do not rely on the demo as storage.</p>
+        <p>Demo workspaces expire within 24 hours. Reset removes them sooner. Do not rely on the demo as permanent storage.</p>
       </section>
       <section>
         <h2>Subscriptions are not sold in M1</h2>

@@ -24,15 +24,16 @@ async fn main() {
     let listener = TcpListener::bind(address)
         .await
         .expect("the configured port must be available");
-    let state = AppState::default();
+    let state = AppState::production();
     let purge_store = state.demo.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(60 * 60));
         loop {
             interval.tick().await;
-            let removed = purge_store.purge_expired();
-            if removed > 0 {
-                info!(removed, "expired demo workspaces purged");
+            match purge_store.purge_expired().await {
+                Ok(removed) if removed > 0 => info!(removed, "expired demo workspaces purged"),
+                Err(error) => warn!(?error, "expired demo workspace purge failed"),
+                _ => {}
             }
         }
     });
@@ -40,8 +41,9 @@ async fn main() {
     info!(
         %address,
         ?static_dir,
+        demo_store = state.demo.backend_name(),
         build_sha = routes_build_sha(),
-        "server started; runtime config supplied: PORT/STATIC_DIR or defaults; generated secrets: none in M1"
+        "server started; runtime config supplied: PORT/STATIC_DIR or defaults; demo persistence selected automatically; generated secrets: none in M1"
     );
 
     axum::serve(listener, app_with_state(static_dir, state))

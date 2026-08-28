@@ -5,7 +5,10 @@ use axum::{
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use std::path::PathBuf;
-use subcontractor_margin_chain_server::{app_with_state, demo::AppState};
+use subcontractor_margin_chain_server::{
+    app_with_state,
+    demo::{AppState, DemoStore},
+};
 use tower::ServiceExt;
 
 async fn send(
@@ -69,6 +72,61 @@ async fn workspace(app: &axum::Router, ip: &str) -> String {
         .next()
         .unwrap()
         .to_owned()
+}
+
+#[tokio::test]
+async fn workspace_survives_replica_handoff_in_shared_persistence() {
+    let directory = tempfile::tempdir().unwrap();
+    let replica_a = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_demo(DemoStore::filesystem(directory.path()).unwrap()),
+    );
+    let replica_b = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_demo(DemoStore::filesystem(directory.path()).unwrap()),
+    );
+    let cookie = workspace(&replica_a, "198.51.100.77").await;
+
+    for target in [&replica_b, &replica_a, &replica_b] {
+        let (status, _, body) = send(
+            target,
+            Method::GET,
+            "/api/v1/demo/chains",
+            Some(&cookie),
+            None,
+            None,
+            "198.51.100.77",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["chains"].as_array().unwrap().len(), 3);
+    }
+
+    let (status, _, _) = send(
+        &replica_b,
+        Method::POST,
+        "/api/v1/demo/chains/autumn-launch-films/costs",
+        Some(&cookie),
+        Some(
+            json!({"subcontractor":"Mara Bell","role":"Location sound mix","amount_minor":600000}),
+        ),
+        Some("replica-shared-write"),
+        "198.51.100.77",
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let (status, _, body) = send(
+        &replica_a,
+        Method::GET,
+        "/api/v1/demo/chains/autumn-launch-films",
+        Some(&cookie),
+        None,
+        None,
+        "198.51.100.77",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["calculation"]["margin_at_risk_minor"], 130000);
 }
 
 #[tokio::test]
@@ -232,6 +290,18 @@ async fn demo_seed_mutations_idempotency_and_reset_work_end_to_end() {
 async fn invalid_requests_are_bounded_and_return_problem_details() {
     let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
     let cookie = workspace(&app, "198.51.100.22").await;
+    let (status, headers, _) = send(
+        &app,
+        Method::GET,
+        "/api/v1/demo/chains",
+        Some(&cookie),
+        None,
+        None,
+        "198.51.100.22",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers.get(header::CACHE_CONTROL).unwrap(), "no-store");
     let (status, headers, problem) = send(
         &app,
         Method::POST,
@@ -251,6 +321,7 @@ async fn invalid_requests_are_bounded_and_return_problem_details() {
         "application/problem+json"
     );
     assert_eq!(problem["code"], "invalid_chain");
+    assert_eq!(headers.get(header::CACHE_CONTROL).unwrap(), "no-store");
     assert!(problem["request_id"].as_str().unwrap().len() > 20);
 
     let oversized = "z".repeat(70 * 1024);
@@ -263,6 +334,29 @@ async fn invalid_requests_are_bounded_and_return_problem_details() {
         .unwrap();
     let response = app.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn claim_demo_cookie_is_scoped_and_secure_on_https() {
+    let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/v1/demo/workspaces")
+                .header("x-forwarded-for", "198.51.100.88")
+                .header("x-forwarded-proto", "https")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let cookie = response.headers()[header::SET_COOKIE].to_str().unwrap();
+    assert!(cookie.contains("; Secure"));
+    assert!(cookie.contains("; HttpOnly"));
+    assert!(cookie.contains("; SameSite=Lax"));
+    assert!(!cookie.to_ascii_lowercase().contains("domain="));
 }
 
 #[tokio::test]
