@@ -43,7 +43,26 @@ The reported replica failure was reproduced before editing: replica A created a 
 
 ## Deployment
 
-Pending the committed repair image. After deployment, record the live build identity, shared-workspace sequence, claims, headers, and factory URL verification here before final handoff.
+The repair container built successfully in ACR from `rust:1-slim` and was deployed through the work-order container configuration to <https://subcontractor-margin-chain.sociobot.in>. The first repaired image reported build `2f7cfc67c98c7a7ce8b4aca4fbef70f9e45a31c7`; the final documentation-only commit was then redeployed and checked again.
+
+Live evidence:
+
+- `/health` returned `200` with the deployed source SHA; `/ready` returned `200` with `demo_store: azure-blob-shared`.
+- A new secure cookie produced 12 consecutive cross-request reads: `200` × 12. The pre-fix reproduction was `200` on replica A and `401` on replica B.
+- A missing workspace returned `401` with `Cache-Control: no-store`; `/not-a-real-page` returned HTTP 404.
+- The hashed JavaScript response returned `Cache-Control: public, max-age=31536000, immutable`.
+- `/internal/metrics` returned Prometheus text and `smc_demo_store_ready 1`.
+- The complete live Playwright suite passed 44/44 across desktop and 390 px mobile, including all browser claims.
+- Factory `verify-url.sh` returned HTTPS 200, 673 ms load, no console errors, one H1, one main landmark, `lang=en`, and no missing image/button names.
+- `@axe-core/cli` 4.10.3 found 0 violations on `/` and `/demo`.
+- Lighthouse mobile: performance 99, accessibility 100, best practices 100, SEO 100; FCP 1.7 s, LCP 1.7 s, TBT 10 ms, CLS 0.041.
+- A 100-request concurrent `/health` smoke returned 100 × HTTP 200.
+
+Evidence files are in `/work/evidence/live-2f7cfc6/` in the worker environment.
+
+## Needs operator action
+
+None for M1. The Container App managed identity already has blob-data access. The app creates and uses its private `subcontractor-margin-chain-demo` container without a secret or deployment environment setting.
 
 ## Known gaps and next steps
 
