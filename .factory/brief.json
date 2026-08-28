@@ -1,0 +1,31 @@
+{
+  "slug": "subcontractor-margin-chain",
+  "title": "Subcontractor Margin Chain",
+  "territory": "utilities",
+  "user": "Boutique agencies that deliver through freelancers and subcontractors but need to see end-client commitments, subcontractor cost, approval, and invoice status in one job chain. Paying customer: agency owner; wedge: job-level margin protection at $79/month.",
+  "evidence": [
+    {
+      "url": "https://hn.algolia.com/api/v1/items/46197005",
+      "date": "2025-12-08",
+      "quote_or_summary": "The author reports interviews with 60+ freelancers, creators, and small agencies who lose 20–30% of time and revenue to work split across Gmail/WhatsApp, Notion, payment links, and spreadsheets."
+    },
+    {
+      "url": "https://github.com/invoiceninja/invoiceninja/issues/12146",
+      "date": "2026-08-05",
+      "quote_or_summary": "A feature request asks for end-client/sub-client relationships across clients, projects, tasks, and invoices for subcontracted work."
+    }
+  ],
+  "recurrence": "Both qualitative agency interviews and an invoicing feature request point to the same missing link between the buyer, delivery partner, work, and cash.",
+  "current_workaround": "Create separate client/project records, keep subcontractor rates in spreadsheets, and reconcile profitability only after invoices are paid.",
+  "incumbents_and_gap": "Harvest, Bonsai, HoneyBook, and Invoice Ninja cover pieces of time, invoices, or portals. They do not make a nested end-client-to-subcontractor margin chain the core operational record.",
+  "smallest_useful_product": "A job chain with end client, agency client, subcontractors, approved scope, committed cost, invoice milestones, and margin-at-risk alerts. Non-goals: payroll, marketplace hiring, general project management, or accounting.",
+  "success_measure": "Pilot agencies record 95% of subcontracted jobs before work starts and catch at least one margin-at-risk job per quarter before invoicing.",
+  "artifact_class": "web-with-backend",
+  "monetization": "subscription — $79/month per agency is justified by protecting one project's margin and scales by active job chains, not seats.",
+  "constraints": "Protect contractor rates and client identities with role-based access; do not calculate payroll tax or make employment classifications.",
+  "est_build_effort": "M",
+  "scale": "venture",
+  "why_distinct": "The central object is a commercial delivery chain, not a generic task board or freelancer marketplace.",
+  "confidence": 4,
+  "state": "RESEARCHED"
+}
