@@ -1,7 +1,8 @@
 import { expect, request, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }, testInfo) => {
-  const projectOctet = testInfo.project.name === "mobile" ? 113 : 114;
+  const runOffset = Number.parseInt(process.env.PLAYWRIGHT_IP_OFFSET ?? "0", 10) || 0;
+  const projectOctet = (testInfo.project.name === "mobile" ? 113 : 114) + runOffset;
   const claimOctet = [...testInfo.testId].reduce((total, character) => total + character.charCodeAt(0), 0) % 200 + 10;
   await page.setExtraHTTPHeaders({ "X-Forwarded-For": `203.0.${projectOctet}.${claimOctet}` });
 });
@@ -70,7 +71,7 @@ test("@claim:m1-demo-reset discards changes and invalidates the old workspace", 
 
   const oldWorkspace = await request.newContext({
     baseURL,
-    extraHTTPHeaders: { Cookie: `smc_demo=${oldCookie!.value}`, "X-Forwarded-For": "203.0.115.99" },
+    extraHTTPHeaders: { Cookie: `smc_demo=${oldCookie!.value}`, "X-Forwarded-For": `203.0.${115 + (Number.parseInt(process.env.PLAYWRIGHT_IP_OFFSET ?? "0", 10) || 0)}.99` },
   });
   const response = await oldWorkspace.get("/api/v1/demo/chains");
   expect(response.status()).toBe(401);
@@ -78,16 +79,18 @@ test("@claim:m1-demo-reset discards changes and invalidates the old workspace", 
 });
 
 test("@claim:m1-demo-isolation-expiry isolates workspaces for no more than 24 hours", async ({ baseURL }) => {
-  const first = await request.newContext({ baseURL, extraHTTPHeaders: { "X-Forwarded-For": "203.0.116.41" } });
-  const second = await request.newContext({ baseURL, extraHTTPHeaders: { "X-Forwarded-For": "203.0.116.42" } });
+  const runOffset = Number.parseInt(process.env.PLAYWRIGHT_IP_OFFSET ?? "0", 10) || 0;
+  const first = await request.newContext({ baseURL, extraHTTPHeaders: { "X-Forwarded-For": `203.0.${116 + runOffset}.41` } });
+  const second = await request.newContext({ baseURL, extraHTTPHeaders: { "X-Forwarded-For": `203.0.${116 + runOffset}.42` } });
   const before = Math.floor(Date.now() / 1000);
   const firstCreated = await first.post("/api/v1/demo/workspaces");
   const secondCreated = await second.post("/api/v1/demo/workspaces");
   expect(firstCreated.status()).toBe(201);
   expect(secondCreated.status()).toBe(201);
   const expiry = (await firstCreated.json()).expires_at as number;
+  const after = Math.floor(Date.now() / 1000);
   expect(expiry).toBeGreaterThan(before);
-  expect(expiry).toBeLessThanOrEqual(before + 24 * 60 * 60);
+  expect(expiry).toBeLessThanOrEqual(after + 24 * 60 * 60);
 
   const changed = await first.post("/api/v1/demo/chains/autumn-launch-films/costs", {
     headers: { "Idempotency-Key": "isolation-cost-change" },

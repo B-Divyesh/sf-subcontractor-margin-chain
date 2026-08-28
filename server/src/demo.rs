@@ -625,6 +625,7 @@ impl AzureBlobStore {
         self.ensure_container()
             .await
             .map_err(RateLimitError::Unavailable)?;
+        let request_started_at = epoch_milliseconds();
         for attempt in 0..64 {
             let current = self
                 .get_rate_bucket(key)
@@ -635,7 +636,7 @@ impl AzureBlobStore {
                 .unwrap_or_default();
             check_bucket(
                 &mut bucket.accepted_at_millis,
-                epoch_milliseconds(),
+                request_started_at,
                 allowance,
                 period,
             )?;
@@ -1197,5 +1198,19 @@ mod tests {
         assert!(store.exists(&id).await);
         assert!(store.remove(&id).await.unwrap());
         assert!(!store.exists(&id).await);
+    }
+
+    #[test]
+    fn a_concurrent_burst_uses_request_arrival_time_for_the_shared_allowance() {
+        let mut accepted = Vec::new();
+        let arrival = 10_000;
+        for _ in 0..40 {
+            assert!(check_bucket(&mut accepted, arrival, 40, Duration::from_secs(1)).is_ok());
+        }
+        assert!(matches!(
+            check_bucket(&mut accepted, arrival, 40, Duration::from_secs(1)),
+            Err(RateLimitError::Limited(1))
+        ));
+        assert!(check_bucket(&mut accepted, arrival + 1_000, 40, Duration::from_secs(1)).is_ok());
     }
 }

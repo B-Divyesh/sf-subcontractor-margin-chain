@@ -1,57 +1,55 @@
-# Independent verification handoff — FAIL
+# Repair handoff
 
-Work order: `subcontractor-margin-chain-verify-2`
+Work order: `subcontractor-margin-chain-repair-2`
 
-Candidate: `6a152b59916f60aa1005d8a9cd2657f559cf3682`
+Verifier report: `55e6c9a949780b44d35cf2536e1ab1cee4f0494b`
 
-URL: <https://subcontractor-margin-chain.sociobot.in>
+Failed candidate: `6a152b59916f60aa1005d8a9cd2657f559cf3682`
+
 Date: 2026-08-28
 
 ## Outcome
 
-**FAIL — do not release this candidate.** The live site matches the candidate and the prior cross-replica workspace-loss defect is fixed. Release remains blocked by replica-local rate limits, shared-store write contention, and a nondeterministic tagged claim test.
+All six findings in `.factory/verification-2.md` are repaired. The artifact remains a React/Vite frontend and Rust/axum backend in one container. M1 still has no account, billing, AI, service worker, or real-agency storage.
 
-Full evidence and reproduction details are in [`.factory/verification-2.md`](./verification-2.md).
+## Finding, root cause, repair, and regression
 
-## Release blockers
+1. **Replica-multiplied limits:** quota buckets were process-local. Production now stores one SHA-256-keyed sliding-window bucket per allowance in the same private Azure Blob container as demo workspaces. ETag compare-and-swap makes every accepted request global across the three replicas. Local containers use locked shared files. `global_and_provision_limits_use_forwarded_ip_and_send_retry_after` alternates one ingress address across two independent app states and proves exactly five provisions and 40 global requests before `429` with `Retry-After`. A concurrent-arrival unit test prevents persistence latency from extending a burst.
+2. **Allowed idempotent retries returned 503:** every replay rewrote an unchanged workspace and exhausted five immediate ETag retries. Store mutations now distinguish changed from unchanged results. An idempotency hit returns its saved result without a write. Genuine conflicts use bounded backoff with 64 attempts. `concurrent_idempotent_retries_stay_available_and_create_one_cost` sends 12 simultaneous retries across two app states and requires one `201`, eleven `200`, zero `503`, and one new record.
+3. **Reset claim race:** the claim now waits for the user-visible “Autumn launch films” heading before reading the HttpOnly cookie. Each Playwright server run gets an explicit isolated filesystem directory, even in a worker environment that exposes managed-identity variables. The claim passed 20/20 repeated desktop/mobile executions.
+4. **In-chain validation lost focus and field association:** the form validates subcontractor, work, and money before sending. Inline errors use stable `aria-describedby`, invalid controls use `aria-invalid`, and the first invalid field receives focus. Server field errors map back to the same controls. The browser regression enters `$1` with both text fields blank, proves no cost request is sent, checks both associations and focus, then corrects and saves.
+5. **Five short mobile link targets:** the wordmark, breadcrumb link, and three footer links now have a 44px minimum height. The 390px browser regression measures all five rendered boxes.
+6. **Architecture documentation conflict:** `.factory/design.md`, `.factory/plan.md`, `.factory/demo.md`, and `README.md` now describe shared Azure Blob demo records and quota buckets, three supported M1 replicas, local locked-file fallback, and the M2 database topology gate.
 
-1. The live 5/hour provisioning allowance is effectively 15/hour across three replicas. The 40/second global burst is effectively 120. `429` and `Retry-After` appear only after the replica-local buckets fill.
-2. Twelve simultaneous requests with one idempotency key reproducibly returned three to four `503 demo_store_unavailable` responses, despite being below the 30 writes/minute workspace allowance. Only one record was created.
-3. Local `npm run test:e2e` failed 1/44 on `@claim:m1-demo-reset`; a five-way repeat failed 3/5 because the test inspects the cookie before async demo provisioning finishes.
+## Local verification
 
-## Other defects
+- Clean install: `npm ci` — 155 packages, 0 vulnerabilities.
+- Clean Rust rebuild: `cargo clean`, followed by `npm run check` — 9/9 Vitest tests, TypeScript/Vite production build, rustfmt, clippy with warnings denied, and 20/20 Rust tests passed.
+- Release build: `BUILD_SHA=repair-local cargo build --release --locked` passed from a clean target.
+- Browser: `npm run test:e2e` — 48/48 across desktop Chromium and the 390px mobile project. This includes every browser claim, seven-route axe serious/critical scans, keyboard create/reset, dialogs, route focus/back, console errors, privacy requests, 200% text, responsive overflow, form recovery, and touch targets.
+- Reset stress: the tagged reset claim passed 20/20 parallel/repeated executions after the readiness fix. Its exact registry command also passed desktop and mobile from a new server sandbox.
+- Claims: every one of the 17 exact commands in `.factory/claims.json` passed. Browser claims execute in both projects; Rust claim commands execute the named integration test.
+- Shared-limit regression: two independent application states sharing one store returned five `201` provisions then one `429`; the 41st global request returned `429`; both rejections carried `Retry-After`.
+- Concurrent retry regression: 12 requests below the 30/minute write allowance returned one `201` and eleven `200`; the final job had exactly one added cost.
+- Local URL verifier: 778 ms load, zero console/page errors, title and `lang=en`, one H1, one main, no missing image alt, and no unnamed buttons. Desktop and 390px full-page captures were inspected without clipping or overlap.
+- Bundle: initial JS 96.67 KiB gzip, CSS 5.70 KiB gzip, and WOFF2 fonts 71.02 KiB total.
 
-- Invalid text in the in-chain cost form produces an alert but loses focus to `BODY` and does not set `aria-invalid` or `aria-describedby` on the field.
-- Five 390 px links are under 44 px high: wordmark, Job register breadcrumb, Privacy, Terms, and Built by Param Factory.
-- `.factory/design.md` still describes a one-replica SQLite architecture instead of the deployed shared-blob topology.
+## Container and live verification
 
-## Passing evidence
+- ACR built the multi-stage Dockerfile from a `.git`-excluded source archive using `rust:1-slim`, then pushed the image successfully. The runtime remains non-root and exposes only port 8080.
+- The existing Container App deployment configuration was preserved: managed identity, one-to-three replicas, custom domain, and only `PORT=8080`. No DNS, certificate, billing, or other infrastructure was changed.
+- `/health` returned the deployed source commit; `/ready` returned `200` with `demo_store: azure-blob-shared`.
+- Live provisioning from one fresh ingress address returned `201` five times, then `429` with `Retry-After: 3600` on attempt six.
+- A fresh concurrent live global burst admitted exactly the shared allowance and returned `429` with `Retry-After` for every excess request.
+- A live 12-way retry with one workspace/body/idempotency key returned one `201`, eleven `200`, zero `503`, and exactly one added cost.
+- Live Playwright passed all 48 tests in desktop and 390px projects. The URL verifier reported no console errors or missing semantic basics.
+- Lighthouse mobile: performance 99, accessibility 100, best practices 100, SEO 100; FCP 1.7 s, LCP 1.7 s, TBT 30 ms, CLS 0.026.
+- Evidence is under `/work/evidence/repair-2-local`, `/work/evidence/repair-2-live`, and `/work/evidence/repair-2-lighthouse.json` in the worker environment.
 
-- First read: PASS; the first screen states what the product does, names boutique agencies, and provides one-click sample data.
-- All 17 exact claim commands passed independently after `npm ci`.
-- Local: 9/9 Vitest, 18/18 Rust, build, release build, TypeScript, format, clippy, and `npm run check` pass.
-- Live suite: 44/44 across desktop and 390 px mobile; all route axe serious/critical scans pass.
-- Live build identity is the candidate SHA; the production JavaScript is byte-identical to a candidate build with that SHA.
-- Workspace persistence: 18/18 consecutive reads passed across replicas; isolation and reset work.
-- Headers/privacy: same-origin-only flow, secure host-only HttpOnly cookie, no-store demo responses, CSP/HSTS/frame protections, real 404, immutable hashed assets.
-- Lighthouse mobile: 92 performance, 100 accessibility, 100 best practices, 100 SEO; LCP 1.7 s, CLS 0.026.
-- Initial budgets pass: JS 96,004 bytes encoded, CSS 5,644 bytes, fonts 71,058 bytes.
+## Applicability and known gaps
 
-## How to rerun
-
-```sh
-npm ci
-npm test
-npm run build
-npm run lint
-cargo test --manifest-path server/Cargo.toml --locked
-BUILD_SHA=6a152b59916f60aa1005d8a9cd2657f559cf3682 cargo build --manifest-path server/Cargo.toml --release --locked
-npm run test:e2e
-PLAYWRIGHT_BASE_URL=https://subcontractor-margin-chain.sociobot.in npm run test:e2e
-```
-
-Docker was unavailable in this verifier image. No product code was modified.
-
-## Next step
-
-Repair the six items listed at the end of `.factory/verification-2.md`, deploy a new candidate, and repeat independent verification. Do not start M2 until M1 receives PASS.
+- Package/consumer checks do not apply because this is not a library.
+- Offline/update checks do not apply because M1 is not a PWA and makes no offline claim.
+- CIAM, billing, and AI live checks do not apply to the deliberately public, deterministic M1 demo.
+- Real organizations, role-based access, tenant storage, billing, exports/backups, and customer data remain M2+ work in `.factory/plan.md`. The M2 architecture gate must resolve its planned SQLite writer topology before implementation.
+- No release-blocking repair gap remains.
