@@ -1,0 +1,6 @@
+Copyright 2018 The Newsreader Project Authors (https://github.com/productiontype/Newsreader)
+Copyright 2018 The Recursive Project Authors (https://github.com/arrowtype/recursive)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+The complete license is available at https://openfontlicense.org/open-font-license-official-text/.
+The bundled WOFF2 files come from the Fontsource packages for Newsreader and Recursive.

@@ -1,25 +1,26 @@
-import { plannedRoutes } from "./route-manifest";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AppFrame } from "../components/AppFrame";
+import { ChainPage } from "../routes/ChainPage";
+import { DemoPage } from "../routes/DemoPage";
+import { LandingPage } from "../routes/LandingPage";
+import { NotFoundPage, PrivacyPage, TermsPage } from "../routes/LegalPages";
+import { NewChainPage } from "../routes/NewChainPage";
 
 export function App() {
   return (
-    <main className="scaffold" id="main">
-      <p className="scaffold__eyebrow">Planning scaffold · no product behavior yet</p>
-      <h1>Subcontractor Margin Chain</h1>
-      <p>
-        The design tokens, route contract, test runner, and backend shell are ready
-        for the M1 builder.
-      </p>
-      <h2>Planned M1 routes</h2>
-      <ul>
-        {plannedRoutes
-          .filter((route) => route.milestone === "M1")
-          .map((route) => (
-            <li key={route.path}>
-              <code>{route.path}</code> — {route.purpose}
-            </li>
-          ))}
-      </ul>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppFrame />}>
+          <Route index element={<LandingPage />} />
+          <Route path="demo" element={<DemoPage />} />
+          <Route path="demo/chains/new" element={<NewChainPage />} />
+          <Route path="demo/chains/:chainId" element={<ChainPage />} />
+          <Route path="privacy" element={<PrivacyPage />} />
+          <Route path="terms" element={<TermsPage />} />
+          <Route path="404" element={<NotFoundPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
-

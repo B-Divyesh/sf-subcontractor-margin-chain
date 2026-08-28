@@ -1,8 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
+import "@fontsource/newsreader/latin-600.css";
+import "@fontsource/recursive/latin-400.css";
+import "@fontsource/recursive/latin-700.css";
 import "./styles/tokens.css";
-import "./styles/scaffold.css";
+import "./styles/app.css";
 
 const root = document.getElementById("root");
 
@@ -15,4 +18,3 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
-

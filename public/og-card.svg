@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Subcontractor Margin Chain</title>
+  <desc id="desc">A layered commercial job record showing the client promise, committed cost, and expected margin.</desc>
+  <rect width="1200" height="630" fill="#EEE7D8"/>
+  <path d="M52 85h1096M52 165h1096M52 245h1096M52 325h1096M52 405h1096M52 485h1096M52 565h1096" stroke="#837B6E" opacity=".18"/>
+  <path d="M733 130h354v368H733z" fill="#F0DCD5" stroke="#9D3528" stroke-width="5"/>
+  <path d="M713 110h354v368H713z" fill="#D8EDF0" stroke="#0B5F69" stroke-width="5"/>
+  <path d="M693 90h354v368H693z" fill="#FFFDF7" stroke="#1D2925" stroke-width="6"/>
+  <path d="M740 171h260M740 239h260M740 307h260M740 375h260" stroke="#837B6E" stroke-width="3"/>
+  <circle cx="770" cy="205" r="9" fill="#FFFDF7" stroke="#0B5F69" stroke-width="5"/>
+  <circle cx="770" cy="273" r="9" fill="#FFFDF7" stroke="#0B5F69" stroke-width="5"/>
+  <circle cx="770" cy="341" r="9" fill="#FFFDF7" stroke="#0B5F69" stroke-width="5"/>
+  <path d="M770 214v50m0 18v50m9-127h38m-38 68h38m-38 68h38" stroke="#0B5F69" stroke-width="5"/>
+  <path d="M840 194h130v22H840zm0 68h104v22H840zm0 68h120v22H840z" fill="#1D2925"/>
+  <text x="72" y="122" fill="#0B5F69" font-family="Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="2">SUBCONTRACTOR MARGIN CHAIN</text>
+  <text x="72" y="230" fill="#1D2925" font-family="Georgia, serif" font-size="68" font-weight="700">Protect margin</text>
+  <text x="72" y="308" fill="#1D2925" font-family="Georgia, serif" font-size="68" font-weight="700">before work starts.</text>
+  <text x="72" y="390" fill="#58625B" font-family="Arial, sans-serif" font-size="28">Client promise − committed cost = expected margin</text>
+  <path d="M72 455h468" stroke="#1D2925" stroke-width="3"/>
+  <text x="72" y="510" fill="#1D2925" font-family="Arial, sans-serif" font-size="25">A commercial control record for boutique agencies.</text>
+</svg>

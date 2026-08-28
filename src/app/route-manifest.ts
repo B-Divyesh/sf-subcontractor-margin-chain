@@ -9,7 +9,7 @@ export type PlannedRoute = {
 export const plannedRoutes: readonly PlannedRoute[] = [
   {
     path: "/",
-    title: "Subcontractor Margin Chain — protect every job margin",
+    title: "Subcontractor Margin Chain — protect job margin",
     purpose: "Landing page and live product preview",
     milestone: "M1",
     access: "public",
