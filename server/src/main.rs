@@ -1,5 +1,5 @@
-use std::{env, net::SocketAddr, path::PathBuf};
-use subcontractor_margin_chain_server::app;
+use std::{env, net::SocketAddr, path::PathBuf, time::Duration};
+use subcontractor_margin_chain_server::{app_with_state, demo::AppState};
 use tokio::net::TcpListener;
 use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
@@ -24,10 +24,27 @@ async fn main() {
     let listener = TcpListener::bind(address)
         .await
         .expect("the configured port must be available");
+    let state = AppState::default();
+    let purge_store = state.demo.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(60 * 60));
+        loop {
+            interval.tick().await;
+            let removed = purge_store.purge_expired();
+            if removed > 0 {
+                info!(removed, "expired demo workspaces purged");
+            }
+        }
+    });
 
-    info!(%address, ?static_dir, build_sha = routes_build_sha(), "server started; no secrets required by scaffold");
+    info!(
+        %address,
+        ?static_dir,
+        build_sha = routes_build_sha(),
+        "server started; runtime config supplied: PORT/STATIC_DIR or defaults; generated secrets: none in M1"
+    );
 
-    axum::serve(listener, app(static_dir))
+    axum::serve(listener, app_with_state(static_dir, state))
         .with_graceful_shutdown(shutdown_signal())
         .await
         .expect("server must remain available");
