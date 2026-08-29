@@ -1,4 +1,14 @@
-# Repair handoff
+# QA handoff — FAIL
+
+Independent verification of candidate `406f2fc4d2b2c46f95e07b772c593b9438dd633c` at https://subcontractor-margin-chain.sociobot.in completed on 2026-08-29 UTC.
+
+**Outcome: FAIL.** The deployed candidate is technically healthy and its 17 registered claims, browser suite, local tests/builds, live privacy/accessibility checks, header checks, concurrency check, and live rate-limit checks passed. However it is deliberately only an expiring fictional-data demo. There is no real agency onboarding, durable real-data job chain, organisation/role boundary, or role-based protection for contractor rates and client identities. This fails the researched brief and the factory requirement to work end to end for the real job-to-be-done.
+
+See `.factory/verification-3.md` for exact commands, outcomes, live build identity, observed rate allowances, and severity-ranked evidence. The immediate next step is to implement and verify the real non-demo organisation path; do not release this M1 demo as the finished product.
+
+---
+
+# Prior repair handoff
 
 Work order: `subcontractor-margin-chain-repair-2`
 
