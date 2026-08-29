@@ -1,59 +1,63 @@
-# M1 rendered landing copy audit
+# Rendered copy audit
 
-Audited: 2026-08-28 from `src/routes/LandingPage.tsx` and the shared footer. Word counts treat currency values, hyphenated terms, and the ampersand as one word. Navigation labels and record-field labels are included where they affect first-read clarity.
+Audited: 2026-08-29 from `src/routes/LandingPage.tsx` and the shared footer. Currency values and hyphenated terms count as one word.
 
-| Location | Rendered text | Words | Result |
+| Location | Rendered sentence | Words | Result |
 | --- | --- | ---: | --- |
-| Hero label | Commercial control for subcontracted work | 5 | Pass |
+| Hero label | Job margin tracking for agencies | 5 | Pass |
 | Headline | Protect margin before work starts. | 5 | Pass |
-| Lead | For boutique agencies that hire subcontractors, it links every client promise to cost and cash. | 15 | Pass |
+| Lead | For boutique agencies that hire subcontractors, it links each client commitment to costs and client invoice milestones. | 17 | Pass |
 | Primary action | Try it with sample data | 5 | Pass |
 | Secondary action | See how the chain works | 5 | Pass |
 | Action note | See a filled job chain. | 5 | Pass |
-| Action note | Change anything. | 2 | Pass |
+| Action note | Add a cost, approve scope, or mark an invoice sent. | 10 | Pass |
 | Action note | Reset when finished. | 3 | Pass |
 | Fact | No account for the demo. | 5 | Pass |
 | Fact | Demo changes are discarded. | 4 | Pass |
-| Fact | Studio is $79 a month. | 6 | Pass |
-| Preview heading | See promise, cost, and cash together. | 6 | Pass |
-| Preview status | Check pending work | 3 | Pass |
+| Fact | Planned Studio price: $79 each month. | 6 | Pass |
+| Preview label | Job margin preview | 3 | Pass |
+| Preview heading | See commitment, cost, and invoice status together. | 7 | Pass |
+| Preview status | Pending scope may change margin | 5 | Pass |
 | Preview explanation | A pending social cut-down remains visible before you approve more work. | 11 | Pass |
-| Section heading | Check the chain in three steps. | 6 | Pass |
-| Step heading | Record the promise. | 3 | Pass |
-| Step copy | Add the client commitment, approved scope, and margin floor. | 9 | Pass |
+| Section heading | Track each job's margin in three steps. | 7 | Pass |
+| Step heading | Record the client commitment. | 4 | Pass |
+| Step copy | Add the approved scope, client commitment, and margin floor. | 9 | Pass |
 | Step heading | Commit the cost. | 3 | Pass |
 | Step copy | Link each subcontractor amount before the work starts. | 8 | Pass |
-| Step heading | Watch the chain. | 3 | Pass |
+| Step heading | Check the expected margin. | 4 | Pass |
 | Step copy | See the change that puts margin at risk, then fix it before invoicing. | 13 | Pass |
-| Limits heading | A commercial record, not another project manager. | 7 | Pass |
+| Limits label | Demo and product limits | 4 | Pass |
+| Limits heading | What this tool does not do. | 6 | Pass |
 | Privacy | Your demo workspace is isolated and expires within 24 hours. | 10 | Pass |
 | Demo guidance | The sample uses fictional names and values. | 7 | Pass |
 | Demo guidance | Do not enter client data. | 5 | Pass |
 | Limit | We do not calculate payroll tax or decide worker status. | 10 | Pass |
-| Pricing heading | Price by active work, not seats. | 6 | Pass |
-| Billing note | Accounts and checkout arrive in the next milestone. | 8 | Pass |
+| Pricing label | Planned pricing | 2 | Pass |
+| Pricing heading | Planned pricing by active job chains. | 6 | Pass |
+| Billing note | Accounts and checkout are not available in this demo release. | 10 | Pass |
 | Studio price | $79 per agency each month | 5 | Pass |
 | Studio allowance | Keep up to 25 job chains active. | 7 | Pass |
 | Portfolio price | $159 per agency each month | 5 | Pass |
 | Portfolio allowance | Keep up to 100 job chains active. | 7 | Pass |
-| Footer | Keep the client promise, subcontractor cost, and margin in one job chain. | 12 | Pass |
+| Footer | Keep each client commitment, subcontractor cost, and margin in one job chain. | 12 | Pass |
 
-No sentence exceeds 22 words. No rendered sentence contains: leverage, seamless, effortless, robust, powerful, intuitive, reimagine, supercharge, unlock, delightful, journey, ecosystem, or AI-powered.
+No sentence exceeds 22 words. No rendered sentence contains a banned marketing word.
 
-The first screen can be read in one breath: protect job margin; the user is a boutique agency hiring subcontractors; the first action opens filled sample data.
+The first screen states the job, names boutique agencies, and offers the sample action in one breath.
 
 ## Terminology table
 
-| Concept | One term used |
+| Concept | Term |
 | --- | --- |
-| Complete commercial record | job chain |
+| Commercial record | job chain |
 | Customer signing the agency agreement | contracting client |
 | Ultimate brand or customer | end client |
 | Money the client agreed to pay | client commitment |
-| Money promised to a delivery partner | committed cost |
+| Total money promised to delivery partners | committed cost |
+| One promised delivery cost | subcontractor commitment |
 | Client commitment minus committed cost | expected margin |
 | Minimum acceptable margin | margin floor |
 | Person or company delivering work | subcontractor |
 | Client-agreed work | approved scope |
-| Scheduled client billing event | client milestone |
+| Scheduled billing state | client invoice milestone |
 | No-account sample environment | demo |

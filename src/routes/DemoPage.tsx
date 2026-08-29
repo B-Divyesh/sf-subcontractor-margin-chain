@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { listChains, type JobChain } from "../api/client";
 import { FeedbackPanel, JobRegister, SummaryStrip } from "../components/ChainComponents";
 import { useDemoRevision } from "../components/AppFrame";
+import { chainsToCsv, chainsToJson, downloadText } from "../features/chains/csv";
 
 export function DemoPage() {
   const revision = useDemoRevision();
@@ -28,7 +29,10 @@ export function DemoPage() {
           <h1 tabIndex={-1}>Job margin register</h1>
           <p>Review the jobs that need a commercial decision before the next invoice.</p>
         </div>
-        <Link className="primary-action" to="/demo/chains/new">Add a job chain</Link>
+        <div className="button-row demo-actions">
+          <Link className="primary-action" to="/demo/chains/new">Add a job chain</Link>
+          <Link className="secondary-action" to="/demo/import">Import CSV</Link>
+        </div>
       </header>
       {error ? (
         <FeedbackPanel title={error.includes("offline") ? "The demo is offline" : "The job register did not load"} kind={error.includes("offline") ? "offline" : "error"}>
@@ -37,14 +41,17 @@ export function DemoPage() {
         </FeedbackPanel>
       ) : chains === null ? (
         <FeedbackPanel title="Loading job chains…" kind="loading">
-          <p>The client promises and costs will appear here.</p>
+          <p>The client commitments and costs will appear here.</p>
         </FeedbackPanel>
       ) : (
         <>
           <SummaryStrip chains={chains} />
           <div className="register-heading">
-            <h2>Active job chains</h2>
-            <p>Jobs needing attention appear first.</p>
+            <div><h2>Active job chains</h2><p>Jobs needing attention appear first.</p></div>
+            <div className="button-row export-actions" aria-label="Export sample jobs">
+              <button className="text-button" type="button" onClick={() => downloadText("margin-chain-jobs.csv", chainsToCsv(chains), "text/csv;charset=utf-8")}>Export CSV</button>
+              <button className="text-button" type="button" onClick={() => downloadText("margin-chain-jobs.json", chainsToJson(chains), "application/json")}>Export JSON</button>
+            </div>
           </div>
           <JobRegister chains={chains} />
         </>

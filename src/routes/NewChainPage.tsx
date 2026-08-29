@@ -105,7 +105,7 @@ export function NewChainPage() {
       <header className="page-heading">
         <p className="eyebrow">Northline Studio · demo workspace</p>
         <h1 tabIndex={-1}>Add a job chain</h1>
-        <p>Record the promise and first committed cost before work starts.</p>
+        <p>Record the client commitment and first committed cost before work starts.</p>
       </header>
       {serverError && <p className="form-error action-error" role="alert">{serverError}</p>}
       <div className="new-chain-layout">

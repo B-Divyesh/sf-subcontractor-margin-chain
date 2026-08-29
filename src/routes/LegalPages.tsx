@@ -13,7 +13,8 @@ export function PrivacyPage() {
       </section>
       <section>
         <h2>What we do not collect</h2>
-        <p>M1 has no accounts, analytics, advertising pixels, uploaded files, or payment form. Do not enter real client or subcontractor details in the demo.</p>
+        <p>This release has no accounts, analytics, advertising pixels, or payment form. Do not enter real client or subcontractor details in the demo.</p>
+        <p>CSV files are read in your browser. Valid rows go only to your isolated demo workspace when you choose to import them.</p>
       </section>
       <section>
         <h2>How to remove demo data</h2>
@@ -33,18 +34,18 @@ export function TermsPage() {
     <main id="main" className="legal-page section-shell">
       <p className="eyebrow">Last updated 28 August 2026</p>
       <h1 tabIndex={-1}>Terms for the sample demo</h1>
-      <p className="lead">Use this preview to test job-margin records with fictional data.</p>
+      <p className="lead">Use this demo to test job-margin records with original fictional data.</p>
       <section>
         <h2>The demo is not an accounting service</h2>
-        <p>The demo shows commercial commitments and invoice states. It does not send invoices, collect money, calculate tax, or decide worker status.</p>
+        <p>The demo records commitments and client invoice milestones. It does not send invoices, collect money, calculate tax, or decide worker status.</p>
       </section>
       <section>
         <h2>Your sample edits are temporary</h2>
         <p>Demo workspaces expire within 24 hours. Reset removes them sooner. Do not rely on the demo as permanent storage.</p>
       </section>
       <section>
-        <h2>Subscriptions are not sold in M1</h2>
-        <p>The prices describe planned agency plans. There is no purchase action until accounts and hosted checkout ship in M2.</p>
+        <h2>Subscriptions are not sold in this release</h2>
+        <p>The prices are planned. There is no purchase action until accounts and hosted checkout work.</p>
       </section>
       <section>
         <h2>Acceptable use</h2>

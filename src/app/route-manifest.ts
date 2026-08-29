@@ -22,6 +22,13 @@ export const plannedRoutes: readonly PlannedRoute[] = [
     access: "demo",
   },
   {
+    path: "/demo/import",
+    title: "Import demo jobs — Subcontractor Margin Chain",
+    purpose: "Map and dry-run a CSV import in the sandbox",
+    milestone: "M1",
+    access: "demo",
+  },
+  {
     path: "/demo/chains/new",
     title: "New demo job — Subcontractor Margin Chain",
     purpose: "Create a job chain in the sandbox",

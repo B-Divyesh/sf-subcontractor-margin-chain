@@ -18,7 +18,7 @@ Every demo response, including errors, carries `Cache-Control: no-store`. Demo e
 
 ## Seeded agency and jobs
 
-The fictional demo agency is **Northline Studio**. Names and values are original fixtures, not customer data.
+The fictional demo agency is **Northline Studio**. Names and values are original fixtures, not customer data. Machine-readable provenance is in `.factory/demo-fixtures.json`.
 
 1. **Autumn launch films**
    - Contracting client: Cinder & Co.
@@ -48,7 +48,9 @@ All money fixtures are stored as integer cents with `USD`. M1 does not convert c
 
 ## Reset and exit
 
-The persistent banner reads “Demo — sample data, nothing is saved” and offers “Reset demo” and “Start for real.” Reset requires a compact confirmation because it discards edits, destroys the current workspace, creates a newly seeded workspace, and returns focus to the page heading. “Start for real” leaves demo storage behind and, in M1, explains that accounts arrive in M2. From M2 onward it starts Entra sign-in and organization onboarding; it never imports the sample.
+The persistent banner reads “Demo — sample data, nothing is saved” and offers “Reset demo” and “See planned real-work features.” Reset requires a compact confirmation because it discards edits, destroys the current workspace, creates a newly seeded workspace, and returns focus to the page heading. The planning action explains that accounts, permanent records, roles, and checkout are unavailable in this release. From M2 onward it may start Entra sign-in and organization onboarding; it never imports the sample.
+
+`/demo/import` reads a selected CSV in the browser, maps columns, and shows a validation dry run before sending valid rows to the demo API. The bundled two-job CSV provides a one-click claim fixture. The register exports the current demo workspace as browser-generated CSV or JSON. These tools never read or write a real tenant.
 
 ## Verification
 

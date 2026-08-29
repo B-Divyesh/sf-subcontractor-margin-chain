@@ -8,7 +8,7 @@ use subcontractor_margin_chain_server::app;
 use tower::ServiceExt;
 
 #[tokio::test]
-async fn health_reports_build_identity() {
+async fn claim_health_reports_build_identity() {
     let response = app(PathBuf::from("missing-dist-is-allowed"))
         .oneshot(
             Request::builder()
@@ -22,7 +22,8 @@ async fn health_reports_build_identity() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let text = String::from_utf8(body.to_vec()).unwrap();
     assert!(text.contains("\"status\":\"ok\""));
-    assert!(text.contains("\"build_sha\":\"dev\""));
+    let expected = option_env!("BUILD_SHA").unwrap_or("dev");
+    assert!(text.contains(&format!("\"build_sha\":\"{expected}\"")));
 }
 
 fn test_app() -> (tempfile::TempDir, axum::Router) {

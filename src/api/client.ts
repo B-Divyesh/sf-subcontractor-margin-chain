@@ -128,11 +128,11 @@ export type NewChainInput = {
   cost_minor: number;
 };
 
-export async function createChain(input: NewChainInput): Promise<JobChain> {
+export async function createChain(input: NewChainInput, idempotencyKey: string = crypto.randomUUID()): Promise<JobChain> {
   await ensureWorkspace();
   return request("/api/v1/demo/chains", {
     method: "POST",
-    headers: { "idempotency-key": crypto.randomUUID() },
+    headers: { "idempotency-key": idempotencyKey },
     body: JSON.stringify(input),
   });
 }

@@ -5,7 +5,7 @@ Last updated: 2026-08-28
 
 ## Visual thesis
 
-Subcontractor Margin Chain should feel like the one commercial record an agency would put on the desk before work begins. Its visual world is a layered carbon-copy ledger: warm paper, cyan and red duplicate sheets, ruled columns, registration marks, and compact status stamps. A job is not another dashboard card. It is a stack of linked commitments whose layers can be traced from client promise to subcontractor cost to cash.
+Subcontractor Margin Chain should feel like the one commercial record an agency would put on the desk before work begins. Its visual world is a layered carbon-copy ledger: warm paper, cyan and red duplicate sheets, ruled columns, registration marks, and compact status stamps. A job is not another dashboard card. It is a stack of linked commitments traced from client commitment to subcontractor cost to client invoice milestone.
 
 This direction fits the product because carbon copies make hidden downstream consequences visible. The offset blue layer stands for subcontractor commitments; the red layer appears only when margin needs attention. The metaphor is structural, not nostalgic decoration: layer order, edges, connectors, and stamps explain the chain.
 
@@ -13,7 +13,7 @@ Avoid generic dashboard grids, gradient blobs, glass panels, rounded pill clouds
 
 ## Stack decision
 
-- **Frontend:** React 19, Vite, strict TypeScript, React Router, and small Radix primitives. The chain workspace has interdependent money fields, revisions, permission-based views, dialogs, and dense editable rows. React's form and accessibility ecosystem earns its runtime here. Styling remains hand-written CSS driven by tokens; no Tailwind or themed component kit.
+- **Frontend:** React 19, Vite, strict TypeScript, React Router, and native HTML controls. The chain workspace has interdependent money fields, revisions, dialogs, CSV mapping, and dense editable rows. Native modal dialogs provide focus trapping without injected styles, keeping the strict CSP intact. Styling remains hand-written CSS driven by tokens; no Tailwind or themed component kit.
 - **Backend:** Rust 2021, axum, and tokio. M1 stores anonymous demo workspaces and rate-limit buckets in a private shared Azure Blob container, using ETags, bounded contention backoff, and idempotent no-op reads across replicas. A local container uses locked JSON files under `/data/demo-workspaces`. M2 still plans sqlx/SQLite for authenticated tenant data; that choice must be revisited before horizontal tenant writes ship.
 - **Delivery:** one multi-stage container with three supported application replicas. Axum serves `/api/*`, `/health`, and the built Vite assets from `dist/`. Shared M1 persistence and quotas keep routing behavior consistent across those replicas.
 - **Fonts and scripts:** self-hosted only. M1 will check in subset WOFF2 files and OFL license texts. No runtime CDN.
@@ -116,7 +116,11 @@ Settings use plain ruled lists. Each person row states role and financial visibi
 
 ## State language
 
-- **Empty:** show the record that will appear and a specific action: “No job chains yet. Add the client promise before you book subcontractors.” Demo never starts empty; it starts with the sample.
+- **Empty:** show the record that will appear and a specific action: “No job chains yet. Add the client commitment before you book subcontractors.” Demo never starts empty; it starts with the sample.
+
+## Polish 1 additions
+
+The CSV import screen uses the same ruled paper, carbon accents, tight radii, and written states as the job ledger. Column mapping, dry-run results, and row errors remain one vertical record on phones. CSV and JSON export controls sit beside the register heading instead of introducing dashboard cards. Native dialogs replace the prior injected-style primitive while preserving the sheet form, focus trap, Escape behavior, and reduced-motion policy.
 - **Loading:** preserve the ledger geometry with quiet ruled placeholders and the visible text “Loading job chains…”. Do not animate under reduced motion.
 - **Error:** keep entered data in place. Say what failed and offer one next action: “We could not save this cost. Check your connection and try again.”
 - **Offline:** the demo explains that unsent edits remain in the demo namespace; signed-in work is read-only until the API returns unless an offline mutation queue has been proven.

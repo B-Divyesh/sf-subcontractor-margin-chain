@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
   <title id="title">Subcontractor Margin Chain</title>
-  <desc id="desc">A layered commercial job record showing the client promise, committed cost, and expected margin.</desc>
+  <desc id="desc">A layered commercial job record showing the client commitment, committed cost, and expected margin.</desc>
   <rect width="1200" height="630" fill="#EEE7D8"/>
   <path d="M52 85h1096M52 165h1096M52 245h1096M52 325h1096M52 405h1096M52 485h1096M52 565h1096" stroke="#837B6E" opacity=".18"/>
   <path d="M733 130h354v368H733z" fill="#F0DCD5" stroke="#9D3528" stroke-width="5"/>
@@ -15,7 +15,7 @@
   <text x="72" y="122" fill="#0B5F69" font-family="Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="2">SUBCONTRACTOR MARGIN CHAIN</text>
   <text x="72" y="230" fill="#1D2925" font-family="Georgia, serif" font-size="68" font-weight="700">Protect margin</text>
   <text x="72" y="308" fill="#1D2925" font-family="Georgia, serif" font-size="68" font-weight="700">before work starts.</text>
-  <text x="72" y="390" fill="#58625B" font-family="Arial, sans-serif" font-size="28">Client promise − committed cost = expected margin</text>
+  <text x="72" y="390" fill="#58625B" font-family="Arial, sans-serif" font-size="28">Client commitment − committed cost = expected margin</text>
   <path d="M72 455h468" stroke="#1D2925" stroke-width="3"/>
-  <text x="72" y="510" fill="#1D2925" font-family="Arial, sans-serif" font-size="25">A commercial control record for boutique agencies.</text>
+  <text x="72" y="510" fill="#1D2925" font-family="Arial, sans-serif" font-size="25">A job margin record for boutique agencies.</text>
 </svg>

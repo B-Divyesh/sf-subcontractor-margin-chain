@@ -287,7 +287,7 @@ async fn demo_seed_mutations_idempotency_and_reset_work_end_to_end() {
 }
 
 #[tokio::test]
-async fn invalid_requests_are_bounded_and_return_problem_details() {
+async fn claim_problem_details_are_structured_and_bounded() {
     let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
     let cookie = workspace(&app, "198.51.100.22").await;
     let (status, headers, _) = send(
@@ -334,6 +334,37 @@ async fn invalid_requests_are_bounded_and_return_problem_details() {
         .unwrap();
     let response = app.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn claim_every_demo_response_uses_no_store() {
+    let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
+    let cookie = workspace(&app, "198.51.100.24").await;
+    let (status, headers, _) = send(
+        &app,
+        Method::GET,
+        "/api/v1/demo/chains",
+        Some(&cookie),
+        None,
+        None,
+        "198.51.100.24",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers.get(header::CACHE_CONTROL).unwrap(), "no-store");
+
+    let (status, headers, _) = send(
+        &app,
+        Method::POST,
+        "/api/v1/demo/chains",
+        Some(&cookie),
+        Some(json!({"name":"x"})),
+        Some("invalid-no-store-check"),
+        "198.51.100.24",
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(headers.get(header::CACHE_CONTROL).unwrap(), "no-store");
 }
 
 #[tokio::test]

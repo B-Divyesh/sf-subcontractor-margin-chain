@@ -45,6 +45,7 @@ pub fn app_with_state(static_dir: PathBuf, state: AppState) -> Router {
         .merge(api)
         .route("/", spa_route(index.clone(), StatusCode::OK))
         .route("/demo", spa_route(index.clone(), StatusCode::OK))
+        .route("/demo/import", spa_route(index.clone(), StatusCode::OK))
         .route("/demo/chains/new", spa_route(index.clone(), StatusCode::OK))
         .route(
             "/demo/chains/{chain_id}",

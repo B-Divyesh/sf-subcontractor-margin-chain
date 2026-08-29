@@ -138,7 +138,7 @@ export function ChainPage() {
     return (
       <main id="main" className="app-main section-shell">
         <h1 tabIndex={-1}>Loading the job chain…</h1>
-        <FeedbackPanel title="Loading the linked record" kind="loading"><p>Promise, cost, scope, and invoices will appear here.</p></FeedbackPanel>
+        <FeedbackPanel title="Loading the linked record" kind="loading"><p>Client commitment, cost, scope, and invoice milestones will appear here.</p></FeedbackPanel>
       </main>
     );
   }

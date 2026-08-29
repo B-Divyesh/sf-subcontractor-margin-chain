@@ -48,7 +48,7 @@ export function JobRegister({ chains }: { chains: JobChain[] }) {
   if (chains.length === 0) {
     return (
       <FeedbackPanel title="No job chains yet">
-        <p>Add the client promise before you book subcontractors.</p>
+        <p>Add the client commitment before you book subcontractors.</p>
         <Link className="primary-action" to="/demo/chains/new">Add a job chain</Link>
       </FeedbackPanel>
     );
@@ -62,7 +62,7 @@ export function JobRegister({ chains }: { chains: JobChain[] }) {
             <span>{chain.contracting_client}{chain.end_client ? ` → ${chain.end_client}` : ""}</span>
           </div>
           <dl>
-            <div><dt>Client promise</dt><dd>{formatMoney(chain.calculation.client_commitment_minor)}</dd></div>
+            <div><dt>Client commitment</dt><dd>{formatMoney(chain.calculation.client_commitment_minor)}</dd></div>
             <div><dt>Committed cost</dt><dd>{formatMoney(chain.calculation.committed_cost_minor)}</dd></div>
             <div><dt>Expected margin</dt><dd>{formatMoney(chain.calculation.expected_margin_minor)} · {formatPercent(chain.calculation.margin_percent_tenths)}</dd></div>
           </dl>

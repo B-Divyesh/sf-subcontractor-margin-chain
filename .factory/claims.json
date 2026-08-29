@@ -2,114 +2,177 @@
   {
     "id": "m1-chain-math",
     "claim": "Shows client commitment, committed subcontractor cost, and expected margin in one job chain",
-    "where": "landing live preview, demo margin slip, README",
+    "where": "landing preview, demo margin check, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-chain-math",
-    "sandbox": "fresh browser context at /demo; open Autumn launch films; assert $24,000 - $14,500 = $9,500 and 39.6%"
+    "sandbox": "fresh /demo workspace; open Autumn launch films; assert $24,000 - $14,500 = $9,500 and 39.6%"
   },
   {
     "id": "m1-margin-risk",
-    "claim": "Warns when committed cost puts expected margin below the job's floor",
-    "where": "landing product preview, demo job register, demo margin slip, README",
+    "claim": "Names the committed cost that puts expected margin below the job's floor",
+    "where": "demo job register, margin check, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-margin-risk",
-    "sandbox": "fresh /demo workspace; add a $6,000 commitment to Autumn launch films; assert the written alert identifies the new commitment and says margin is $1,300 below the 20% floor"
+    "sandbox": "fresh /demo workspace; add a $6,000 commitment; assert the alert names it and reports a $1,300 floor shortfall"
   },
   {
     "id": "m1-linked-status",
     "claim": "Keeps scope approval and client invoice status beside the same job",
-    "where": "landing how-it-works section, demo chain workspace",
+    "where": "landing steps, demo job workspace, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-linked-status",
-    "sandbox": "fresh /demo workspace; approve the pending scope revision and mark its linked client milestone sent; reload and assert both states remain on that demo job"
+    "sandbox": "fresh /demo workspace; approve scope and mark its client invoice milestone sent; reload and assert both states remain"
+  },
+  {
+    "id": "m1-sample-workflow",
+    "claim": "The demo creates a job chain, adds a cost, approves scope, updates an invoice state, and resets the sample",
+    "where": "README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-sample-workflow",
+    "sandbox": "fresh /demo workspace; perform every named action and assert reset restores exactly three original jobs"
+  },
+  {
+    "id": "m1-demo-fixtures",
+    "claim": "The demo starts with three original fictional Northline Studio jobs",
+    "where": "landing limits, README, demo contract",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-demo-fixtures",
+    "sandbox": "fresh /demo workspace; assert the three exact fixture IDs and names plus the repository provenance record"
   },
   {
     "id": "m1-demo-no-account",
     "claim": "The sample demo needs no account",
-    "where": "landing first-screen facts, demo banner, README",
+    "where": "landing first-screen facts, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-demo-no-account",
-    "sandbox": "fresh browser context; open /?demo=1; assert a seeded job register is usable without redirecting to CIAM or showing an account gate"
+    "sandbox": "fresh browser context; open /?demo=1; assert the seeded register works without CIAM, billing, or an account gate"
   },
   {
     "id": "m1-demo-reset",
     "claim": "Demo changes are discarded when the sample is reset",
-    "where": "landing first-screen facts, demo banner, README",
+    "where": "landing facts, demo banner, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-demo-reset",
-    "sandbox": "fresh /demo workspace; change a commitment; choose Reset demo and confirm; assert original sample values return and the prior demo workspace identifier is no longer accepted"
-  },
-  {
-    "id": "m1-plan-prices",
-    "claim": "Studio costs $79 per agency each month and Portfolio costs $159 per agency each month",
-    "where": "landing pricing section",
-    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-plan-prices",
-    "sandbox": "fresh landing page; assert both named monthly prices and their active-job limits are visible, and no purchase action is shown before M2 billing ships"
+    "sandbox": "fresh /demo workspace; add a cost, reset, assert original values return, and assert the old workspace is rejected"
   },
   {
     "id": "m1-demo-isolation-expiry",
     "claim": "Each demo workspace is isolated and expires within 24 hours",
     "where": "landing limits, privacy, terms, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-demo-isolation-expiry",
-    "sandbox": "create two fresh API contexts; mutate one workspace; assert the other remains unchanged and the issued expiry is no more than 24 hours"
+    "sandbox": "create two API contexts; mutate one; assert the other is unchanged and expiry is no more than 24 hours"
   },
   {
     "id": "m1-public-privacy",
-    "claim": "The public site has no analytics, remote fonts, third-party scripts, or advertising",
-    "where": "privacy page, README",
+    "claim": "The public and demo flow makes no cross-origin requests",
+    "where": "privacy, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-public-privacy",
-    "sandbox": "record every request through a landing-to-demo mutation flow and assert the product origin is the only origin"
+    "sandbox": "record every request through landing, demo, and a mutation; assert only the product origin is used"
+  },
+  {
+    "id": "m1-csv-import",
+    "claim": "Maps CSV columns and previews every row before importing valid job chains",
+    "where": "demo import, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-csv-import",
+    "sandbox": "fresh /demo/import; load the bundled CSV; assert two dry-run rows and no errors; import and assert both jobs appear"
+  },
+  {
+    "id": "m1-data-export",
+    "claim": "Exports all current demo job chains as local CSV or JSON downloads",
+    "where": "demo register, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-data-export",
+    "sandbox": "fresh /demo workspace; download CSV and JSON; assert headings, three records, exact fixture ID, and no export request"
+  },
+  {
+    "id": "m1-product-boundaries",
+    "claim": "The demo does not calculate tax, decide worker status, collect money, or send invoices",
+    "where": "landing limits, terms",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-product-boundaries",
+    "sandbox": "inspect demo controls and response keys; assert prohibited capabilities are absent while invoice state marking remains"
+  },
+  {
+    "id": "m1-plan-prices",
+    "claim": "Planned Studio pricing is $79 monthly for 25 active job chains and Portfolio is $159 monthly for 100 active job chains",
+    "where": "landing pricing, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-plan-prices",
+    "sandbox": "fresh landing page; assert both planned prices, both active-job limits, and no purchase action"
   },
   {
     "id": "m1-demo-cookie",
     "claim": "A host-only HttpOnly cookie identifies the demo workspace and is Secure on HTTPS",
-    "where": "privacy page, demo contract",
+    "where": "privacy, demo contract",
     "test": "cargo test --manifest-path server/Cargo.toml --test demo_api claim_demo_cookie_is_scoped_and_secure_on_https --locked",
-    "sandbox": "provision through a simulated HTTPS ingress and assert Secure, HttpOnly, SameSite=Lax, and no Domain attribute"
+    "sandbox": "provision through simulated HTTPS ingress; assert Secure, HttpOnly, SameSite=Lax, and no Domain attribute"
   },
   {
     "id": "m1-shared-replica-persistence",
-    "claim": "Demo workspaces persist across application replicas",
+    "claim": "Demo workspaces persist across application replicas through a shared durable store",
     "where": "README, demo contract",
     "test": "cargo test --manifest-path server/Cargo.toml --test demo_api workspace_survives_replica_handoff_in_shared_persistence --locked",
-    "sandbox": "two independent application states use the same durable store; create on one, read and mutate on the other, then read the change on the first"
+    "sandbox": "two application states share a durable store; create on one, read and mutate on the other, then read the change on the first"
   },
   {
     "id": "m1-port-only-startup",
     "claim": "The server starts with only PORT and defaults to port 8080",
     "where": "README",
     "test": "cargo test --manifest-path server/Cargo.toml --test runtime_contract claim_runtime_starts_with_only_port --locked",
-    "sandbox": "spawn the compiled server with a cleared environment and only PORT, then assert /health returns 200"
+    "sandbox": "spawn the built server with a cleared environment and only PORT, then assert /health returns 200"
   },
   {
     "id": "m1-security-headers",
     "claim": "Web responses include the product security-header policy",
     "where": "factory product contract",
     "test": "cargo test --manifest-path server/Cargo.toml --test health claim_security_headers_are_sent --locked",
-    "sandbox": "request the landing page and assert CSP, HSTS, MIME, referrer, permissions, and frame protections"
+    "sandbox": "request landing and assert CSP, HSTS, MIME, referrer, permissions, and frame protections"
   },
   {
     "id": "m1-api-rate-limits",
-    "claim": "Demo API routes enforce request limits using the ingress client address",
-    "where": "demo contract",
+    "claim": "Demo API routes enforce shared request limits using the ingress client address",
+    "where": "README, demo contract",
     "test": "cargo test --manifest-path server/Cargo.toml --test demo_api global_and_provision_limits_use_forwarded_ip_and_send_retry_after --locked",
-    "sandbox": "alternate requests with one X-Forwarded-For across two independent replicas sharing persistence; exceed provisioning and global allowances; assert 429 and Retry-After"
+    "sandbox": "alternate requests across two replicas; exceed allowances; assert 429 and Retry-After"
+  },
+  {
+    "id": "m1-idempotent-creates",
+    "claim": "Retrying the same create returns its saved result without adding another record",
+    "where": "README",
+    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api concurrent_idempotent_retries_stay_available_and_create_one_cost --locked",
+    "sandbox": "send 12 concurrent retries across two replicas; assert one 201, eleven 200 responses, and one new cost"
+  },
+  {
+    "id": "m1-problem-details",
+    "claim": "Rejected requests return structured problem details",
+    "where": "README",
+    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api claim_problem_details_are_structured_and_bounded --locked",
+    "sandbox": "send invalid and oversized requests; assert problem media type, stable code, request ID, field guidance, and 64 KiB bound"
   },
   {
     "id": "m1-demo-no-store",
     "claim": "Every demo API response, including errors, uses Cache-Control: no-store",
     "where": "README, demo contract",
-    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api invalid_requests_are_bounded_and_return_problem_details --locked",
-    "sandbox": "assert a successful demo response and an invalid demo error response both carry no-store"
+    "test": "cargo test --manifest-path server/Cargo.toml --test demo_api claim_every_demo_response_uses_no_store --locked",
+    "sandbox": "assert a successful response and a rejected response both carry Cache-Control: no-store"
+  },
+  {
+    "id": "m1-money-integrity",
+    "claim": "Money uses integer cents and percentage floors round upward to the next cent when needed",
+    "where": "README, demo contract",
+    "test": "cargo test --manifest-path server/Cargo.toml --lib claim_money_integrity_uses_integer_minor_units_and_rounds_up --locked",
+    "sandbox": "calculate a 25% floor on 10,001 cents; assert integer inputs and outputs plus the 2,501-cent upward result"
+  },
+  {
+    "id": "m1-build-identity",
+    "claim": "The health response reports the build SHA supplied during the image build",
+    "where": "README",
+    "test": "BUILD_SHA=claim-build-0123456789 cargo test --manifest-path server/Cargo.toml --test health claim_health_reports_build_identity --locked",
+    "sandbox": "compile with claim-build-0123456789 and assert /health returns that exact identity"
   },
   {
     "id": "m1-true-404",
     "claim": "Unknown page addresses return HTTP 404",
     "where": "routing contract",
     "test": "cargo test --manifest-path server/Cargo.toml --test health claim_unknown_routes_return_true_404 --locked",
-    "sandbox": "request an unknown path and assert the HTTP status is 404"
+    "sandbox": "request an unknown path and assert HTTP 404 with the designed recovery page"
   },
   {
     "id": "m1-asset-cache",
     "claim": "Hashed production assets use immutable caching",
     "where": "performance contract",
     "test": "cargo test --manifest-path server/Cargo.toml --test health claim_hashed_assets_are_cached_immutably --locked",
-    "sandbox": "request a hashed asset and assert a one-year immutable Cache-Control policy"
+    "sandbox": "request a hashed asset and assert one-year immutable Cache-Control"
   },
   {
     "id": "m1-operations",

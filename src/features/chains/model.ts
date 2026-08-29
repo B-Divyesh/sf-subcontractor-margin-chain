@@ -26,7 +26,7 @@ export function riskLabel(state: RiskState): string {
   return {
     incomplete: "Incomplete",
     safe: "Above floor",
-    near_floor: "Check pending work",
+    near_floor: "Near margin floor",
     below_floor: "Below floor",
   }[state];
 }

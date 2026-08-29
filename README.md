@@ -1,27 +1,34 @@
 # Subcontractor Margin Chain
 
-Subcontractor Margin Chain helps boutique agencies see the client promise, subcontractor cost, approval state, invoice state, and expected margin in one job chain.
+Subcontractor Margin Chain shows boutique agencies each client commitment, subcontractor cost, approval, invoice milestone, and expected margin in one job chain.
 
-M1 ships a public product page and a complete sample workflow. Open the [live demo](https://subcontractor-margin-chain.sociobot.in/demo) without an account. The demo contains three fictional Northline Studio jobs and keeps every edit in an isolated, expiring workspace.
+Open the [live demo](https://subcontractor-margin-chain.sociobot.in/?demo=1) without an account. Its isolated workspace expires within 24 hours.
 
-## What M1 does
+## Current demo
 
-- Shows client commitment, committed subcontractor cost, expected margin, and the exact floor calculation.
-- Warns when a new cost puts the expected margin below the floor and names that cost.
-- Keeps a scope approval and linked client milestone beside the same job.
-- Creates complete sample job chains and resets the sample to its original state.
-- Shows the planned Studio price of $79 per agency each month for 25 active jobs and Portfolio price of $159 for 100.
+- Shows the client commitment, committed cost, expected margin, and exact floor calculation.
+- Names the cost that puts expected margin below the floor.
+- Keeps scope approval and client invoice milestones beside the same job.
+- Creates a job chain, adds a cost, approves scope, updates an invoice state, and resets the sample.
+- Maps CSV columns and previews every row before importing valid job chains.
+- Exports all current demo job chains as local CSV or JSON downloads.
 
-Accounts, real agency storage, team roles, and hosted checkout are M2 work. M1 does not show dead sign-in or purchase controls.
+The demo starts with three original fictional Northline Studio jobs. Their provenance is recorded in [`.factory/demo-fixtures.json`](.factory/demo-fixtures.json).
+
+Planned Studio pricing is $79 per agency each month for 25 active job chains. Portfolio is planned at $159 for 100 active job chains.
+
+## Not available yet
+
+Accounts, permanent agency records, team roles, and hosted checkout are planned for the next milestone. Sign-in and purchase controls stay hidden until they work.
 
 ## Stack
 
 - React 19, React Router, strict TypeScript, and Vite
 - Rust 2021, axum, and tokio
-- Shared Azure Blob demo records and rate limits in production, with locked filesystem storage for local containers
-- One multi-stage container that serves the JSON API and built web assets on `PORT`
+- Shared demo records and request limits across application replicas
+- Locked filesystem storage for local containers
 
-The server needs only `PORT`, which defaults to 8080. Production selects shared storage through its managed identity; local containers use `/data`. Health, readiness, and Prometheus metrics are available at `/health`, `/ready`, and `/internal/metrics`.
+The server starts with only `PORT`, which defaults to 8080. Readiness and Prometheus metrics are available at `/ready` and `/internal/metrics`.
 
 ## Run locally
 
@@ -33,7 +40,7 @@ npm run build
 PORT=8080 STATIC_DIR=dist cargo run --manifest-path server/Cargo.toml --locked
 ```
 
-Then open `http://127.0.0.1:8080/demo`. Vite-only development does not provide the demo API; use the Rust command for the complete product.
+Open `http://127.0.0.1:8080/?demo=1` for the supported sample path.
 
 ## Test and verify
 
@@ -47,15 +54,21 @@ npm run test:e2e
 npm run check
 ```
 
-Playwright 1.58.2 runs every claim on desktop Chromium and a 390px Chromium profile. It also checks keyboard flows, route focus, deep links, 200% text zoom, console errors, internal links, and current serious or critical axe findings.
+Playwright 1.58.2 runs browser claims on desktop Chromium and a 390px Chromium profile.
 
-Each public claim and its exact command is listed in [`.factory/claims.json`](.factory/claims.json). Demo fixtures, reset behavior, and the storage boundary are in [`.factory/demo.md`](.factory/demo.md).
+It checks keyboard use, route focus, deep links, 200% text zoom, dialog console errors, and internal links. It also checks serious and critical axe findings.
 
-## API
+Every public claim and exact command is listed in [`.factory/claims.json`](.factory/claims.json). The Vitest registry test rejects missing or duplicate claim IDs.
 
-The M1 routes are under `/api/v1/demo/`. Create operations require an `Idempotency-Key`. Idempotent retries return the saved result without rewriting it. Per-client limits are shared across replicas and every `429` includes `Retry-After`. Errors use `application/problem+json`. Every demo response uses `Cache-Control: no-store`.
+## Demo API
 
-The server stores money as signed integer cents and calculates the floor with conservative upward rounding. It never uses a binary floating-point value as the authoritative money amount.
+Demo routes live under `/api/v1/demo/`. Create operations require an `Idempotency-Key`. A retry returns its saved result without adding another record.
+
+Per-client limits are shared across replicas. Every rejected limit response includes `Retry-After`.
+
+Rejected requests use `application/problem+json` with a stable code, message, request ID, and field when relevant. Every demo API response uses `Cache-Control: no-store`.
+
+The server stores money as signed integer cents. It rounds each percentage floor upward to the next cent when needed.
 
 ## Build and deploy
 
@@ -65,10 +78,14 @@ docker run --rm -p 8080:8080 subcontractor-margin-chain
 curl http://127.0.0.1:8080/health
 ```
 
-The factory deploys the container and supplies only `PORT`. `/health` returns the build SHA supplied at image build time. Repository code does not change DNS, billing, or other infrastructure directly.
+`/health` returns the build SHA supplied during the image build. Deploy this container through the factory; do not change infrastructure from this repository.
 
 ## Privacy and license
 
-The public site has no analytics, remote fonts, third-party scripts, or advertising. The demo is for fictional data and can be destroyed with “Reset demo.” See `/privacy` and `/terms` in the product.
+The public and demo flow makes no cross-origin requests. It has no analytics, remote fonts, third-party scripts, or advertising.
 
-Licensed under MIT. The self-hosted Newsreader and Recursive fonts use the SIL Open Font License; their notice is in `public/fonts/OFL.txt`.
+CSV files stay in the browser until valid rows are sent to the isolated demo API. CSV and JSON exports are generated in the browser.
+
+Choose “Reset demo” to destroy the current workspace. See [Privacy](https://subcontractor-margin-chain.sociobot.in/privacy) and [Terms](https://subcontractor-margin-chain.sociobot.in/terms).
+
+Licensed under MIT. Newsreader and Recursive use the SIL Open Font License in `public/fonts/OFL.txt`.

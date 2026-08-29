@@ -1,0 +1,9 @@
+{
+  "agency": "Northline Studio",
+  "provenance": "Param Factory authored these original fictional fixtures for this product on 2026-08-28; they contain no customer data.",
+  "jobs": [
+    { "id": "autumn-launch-films", "name": "Autumn launch films" },
+    { "id": "annual-report-microsite", "name": "Annual report microsite" },
+    { "id": "field-interview-edit", "name": "Field interview edit" }
+  ]
+}

@@ -5,7 +5,7 @@ Product: `subcontractor-margin-chain`
 Artifact: web with backend  
 Production URL: `https://subcontractor-margin-chain.sociobot.in`  
 Plan date: 2026-08-28  
-Status: **M1 release blockers repaired; awaiting independent re-verification**
+Status: **M1 polish round 1 in progress; awaiting live verification**
 
 This plan is the build contract. A milestone builder reads this file, `.factory/design.md`, `.factory/demo.md`, `.factory/claims.json`, all prior handoffs, and the latest review notes before changing code. A milestone is not complete until its claims, tests, and definition of done pass from a clean checkout. Review and polish must pass before the next milestone begins.
 
@@ -15,19 +15,19 @@ This plan is the build contract. A milestone builder reads this file, `.factory/
 
 The paying customer is the owner of a boutique agency that sells work to a client and delivers some or all of it through freelancers or subcontractors. A producer or finance lead may operate the product day to day. Some jobs also have an intermediary contracting client and a separate end client.
 
-Today, the client promise lives in email, chat, or a proposal. Approved scope lives in a document. Subcontractor rates live in a private spreadsheet. Client and subcontractor invoices live in separate tools. The owner sees true margin after cash moves, when it is too late to change scope, price, or delivery cost.
+Today, the client commitment lives in email, chat, or a proposal. Approved scope lives in a document. Subcontractor rates live in a private spreadsheet. Client and subcontractor invoices live in separate tools. The owner sees true margin after invoice states change, when it is too late to change scope, price, or delivery cost.
 
 The product's central object is a **job chain**: contracting client → optional end client → approved scope and client commitment → subcontractor commitments → client and subcontractor invoice states. It is a commercial control record, not a task board.
 
 ### Promise
 
-**See the client promise, subcontractor cost, and margin risk in one job chain before the invoice goes out.**
+**See the client commitment, subcontractor cost, and margin risk in one job chain before the invoice goes out.**
 
 ### The three jobs the product must nail
 
 1. **Commit a profitable job before work starts.** Record the contracting client, optional end client, approved scope, client commitment, subcontractor commitments, and a margin floor. Show the formula and warn about incomplete costs.
 2. **Control commercial changes during delivery.** Keep scope and cost revisions as history, capture client approval, name the change that crossed the margin floor, and limit who can see client identities and contractor rates.
-3. **Close the job without losing the cash trail.** Keep client milestones and subcontractor invoice states beside the same scope and commitments. Show what is due, sent, paid, overdue, or missing without pretending to be an accounting ledger.
+3. **Close the job without losing the invoice trail.** Keep client milestones and subcontractor invoice states beside the same scope and commitments. Show what is due, sent, paid, overdue, or missing without pretending to be an accounting ledger.
 
 ### Personas and permissions
 
@@ -303,7 +303,7 @@ Every data component specifies empty, loading, error, offline, permission, and n
 1. **Landing:** left-aligned job headline and one-click sample action beside an original ledger stack; real preview before explanation and price.
 2. **Job register:** vertical ruled rows ordered by risk; decisive money and next action first; labeled definition-list form on phones.
 3. **New job:** four sheet sections and a live “Chain check” receipt; one route, preserved fields, exact validation.
-4. **Job workspace:** client-to-cash chain spine, versioned registers, and a sticky margin formula slip that moves near the top on phones.
+4. **Job workspace:** client-to-invoice chain spine, versioned registers, and a sticky margin formula slip that moves near the top on phones.
 5. **Settings:** ruled lists for team visibility, named plan allowance, export, and deletion; consequences written beside actions.
 
 ### Site structure and accessibility
@@ -316,33 +316,25 @@ The landing order is header → first screen → live product preview → three 
 
 ### M1 — Prove the margin chain in a one-click demo
 
-Status: **deployed and verified; awaiting review → polish**
-User outcome: a stranger opens realistic sample jobs, creates or changes a chain, sees deterministic margin risk, links approval and invoice state, and resets the sandbox without an account.
+Status: **polish round 1 implemented locally; awaiting deployment and live re-verification**
+User outcome: a stranger opens realistic sample jobs, creates or imports a chain, sees deterministic margin risk, exports records, and resets the sandbox without an account.
 
 #### Routes and screens added
 
 - `/` landing with approved first-screen copy, live sample preview, how it works, limits/privacy, exact planned prices, and honest “accounts and checkout arrive next” note;
 - `/demo` and `/?demo=1` seeded job register with persistent demo banner;
+- `/demo/import` CSV upload, column mapping, validation dry run, and demo-only import;
 - `/demo/chains/new` complete chain form;
 - `/demo/chains/:chainId` job workspace;
 - `/privacy`, `/terms`, `/404`, plus metadata assets, `robots.txt`, and `sitemap.xml`.
 
 M1 API: `POST /api/v1/demo/workspaces`, `DELETE /api/v1/demo/workspaces/current`, `GET/POST /api/v1/demo/chains`, `GET/PATCH /api/v1/demo/chains/:id`, scoped commitment/scope/cost/milestone mutations, and `/health`. Demo storage and rate-limit details follow `.factory/demo.md`.
 
-M1 includes no account, checkout, real tenant persistence, email, AI, or fabricated customer testimonial. “Start for real” explains what comes in M2. It must not present a dead purchase or sign-in control.
+M1 includes browser-generated CSV/JSON demo exports. It has no account, checkout, real tenant persistence, email, AI, or fabricated customer testimonial. “See planned real-work features” explains what comes later. It must not present a dead purchase or sign-in control.
 
 #### Claims
 
-The executable M1 registry is `.factory/claims.json`.
-
-| ID | User-visible claim | Observable proof |
-| --- | --- | --- |
-| `m1-chain-math` | Shows client commitment, committed subcontractor cost, and expected margin in one job chain | Seeded $24,000 − $14,500 equals $9,500 and 39.6% |
-| `m1-margin-risk` | Warns when committed cost puts expected margin below the job's floor | Add $6,000; warning names the change and $1,300 shortfall |
-| `m1-linked-status` | Keeps scope approval and client invoice status beside the same job | Approve revision, mark linked milestone sent, reload both states |
-| `m1-demo-no-account` | The sample demo needs no account | Enter and edit without CIAM redirect/request |
-| `m1-demo-reset` | Demo changes are discarded when the sample is reset | Reset restores fixtures and invalidates old workspace |
-| `m1-plan-prices` | Studio is $79/month and Portfolio is $159/month | Pricing and limits render; no pre-M2 purchase action |
+The executable M1 registry is `.factory/claims.json`. It is authoritative and includes product, demo, import/export, privacy, response-policy, runtime, and operations claims. The browser claims verify both desktop Chromium and the 390px project. Rust claims target one named server test each.
 
 #### Tests
 
@@ -355,7 +347,7 @@ The executable M1 registry is `.factory/claims.json`.
 
 #### Definition of done
 
-- All six claims pass from a fresh browser using only `/demo`; claim language matches rendered copy and README.
+- Every registered claim passes from a clean clone; claim language matches rendered copy and README.
 - The three seeded jobs and reset contract match `.factory/demo.md`; no demo path can call or read a tenant repository.
 - Margin math is server-authoritative, exact, explained, and handles zero/incomplete/negative results without NaN or false safety.
 - Landing, core flow, empty/loading/error/offline states, 390px layout, keyboard, screen reader smoke, focus management, legal pages, metadata, security headers, CSP, and rate limits pass.
@@ -495,7 +487,7 @@ User outcome: an agency imports its existing spreadsheet safely, shares a revoca
 - `/share/:token` revocable read-only job summary;
 - install prompt/help under `/settings/app` and a web app manifest.
 
-M5 supports a documented UTF-8 CSV template plus mappings for common generic columns, dry-run error export, idempotent import, signed outbound webhooks for chain risk/approval/invoice changes, and QuickBooks/Invoice Ninja-shaped CSV exports without claiming a live accounting sync. The PWA caches the public shell and demo fixtures; signed tenant data is not placed in Cache Storage. No background sync of commercial mutations ships without a separate conflict design and claim.
+M5 extends the M1 demo importer into authenticated tenant storage with a documented UTF-8 CSV template, common mappings, dry-run error export, and transactional idempotency. It also adds signed outbound webhooks and QuickBooks/Invoice Ninja-shaped exports without claiming a live accounting sync. The PWA caches the public shell and demo fixtures; signed tenant data is not placed in Cache Storage. No background sync of commercial mutations ships without a separate conflict design and claim.
 
 #### Planned claims
 

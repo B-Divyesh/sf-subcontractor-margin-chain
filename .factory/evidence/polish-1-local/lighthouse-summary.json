@@ -1,0 +1,11 @@
+{
+  "url": "http://127.0.0.1:4180/",
+  "profile": "mobile",
+  "performance": 99,
+  "accessibility": 100,
+  "best_practices": 100,
+  "seo": 100,
+  "largest_contentful_paint": "1.8 s",
+  "cumulative_layout_shift": 0.028,
+  "total_blocking_time": "30 ms"
+}

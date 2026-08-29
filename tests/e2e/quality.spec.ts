@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   await page.setExtraHTTPHeaders({ "X-Forwarded-For": `203.0.${projectOctet}.${testOctet}` });
 });
 
-for (const path of ["/", "/demo", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms", "/404"]) {
+for (const path of ["/", "/demo", "/demo/import", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms", "/404"]) {
   test(`route ${path} has semantics, a unique title, and no serious axe findings`, async ({ page }) => {
     await page.goto(path);
     await expect(page.locator("main")).toHaveCount(1);
@@ -69,15 +69,41 @@ test("the demo explains a failed or offline load", async ({ page }) => {
   await expect(page.getByText("Reconnect, then try again")).toBeVisible();
 });
 
-test("public and demo routes load without console or page errors", async ({ page }) => {
+test("public and demo routes and both dialogs run without console or page errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
   page.on("pageerror", (error) => errors.push(error.message));
-  for (const path of ["/", "/demo", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms"]) {
+  for (const path of ["/", "/demo", "/demo/import", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms"]) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
   }
+  await page.goto("/demo");
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await expect(page.getByRole("dialog", { name: "Reset the sample?" })).toBeVisible();
+  await page.getByRole("button", { name: "Keep my changes" }).click();
+  await page.getByRole("button", { name: "See planned real-work features" }).click();
+  await expect(page.getByRole("dialog", { name: "Real agency work is planned" })).toBeVisible();
+  await page.getByRole("button", { name: "Return to the demo" }).click();
   expect(errors).toEqual([]);
+});
+
+test("each route updates title, description, canonical, Open Graph, and Twitter metadata", async ({ page }) => {
+  const cases = [
+    ["/demo", "Demo — Subcontractor Margin Chain", "Try the margin chain with isolated sample agency data."],
+    ["/privacy", "Privacy — Subcontractor Margin Chain", "How the public site and isolated demo handle data."],
+    ["/terms", "Terms — Subcontractor Margin Chain", "Terms for using the public site and sample demo."],
+    ["/404", "Page not found — Subcontractor Margin Chain", "Return to Subcontractor Margin Chain or open the sample demo."],
+  ] as const;
+  for (const [path, title, description] of cases) {
+    await page.goto(path);
+    await expect(page).toHaveTitle(title);
+    expect(await page.locator('meta[name="description"]').getAttribute("content")).toBe(description);
+    expect(await page.locator('meta[property="og:title"]').getAttribute("content")).toBe(title);
+    expect(await page.locator('meta[property="og:description"]').getAttribute("content")).toBe(description);
+    expect(await page.locator('meta[name="twitter:title"]').getAttribute("content")).toBe(title);
+    expect(await page.locator('meta[name="twitter:description"]').getAttribute("content")).toBe(description);
+    expect(await page.locator('link[rel="canonical"]').getAttribute("href")).toBe(`https://subcontractor-margin-chain.sociobot.in${path}`);
+  }
 });
 
 test("all internal page links resolve", async ({ page, request }) => {

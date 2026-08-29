@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 function LedgerIllustration() {
   return (
-    <svg className="ledger-illustration" viewBox="0 0 640 520" role="img" aria-label="A layered job record links a client promise to subcontractor cost and expected margin.">
+    <svg className="ledger-illustration" viewBox="0 0 640 520" role="img" aria-label="A layered job record links a client commitment to subcontractor cost and expected margin.">
       <path className="ledger-illustration__risk" d="M126 111h390v310H126z" />
       <path className="ledger-illustration__carbon" d="M105 88h390v310H105z" />
       <path className="ledger-illustration__paper" d="M84 65h390v310H84z" />
@@ -26,18 +26,18 @@ export function LandingPage() {
     <main id="main">
       <section className="hero section-shell">
         <div className="hero__copy">
-          <p className="eyebrow">Commercial control for subcontracted work</p>
+          <p className="eyebrow">Job margin tracking for agencies</p>
           <h1 tabIndex={-1}>Protect margin before work starts.</h1>
-          <p className="lead">For boutique agencies that hire subcontractors, it links every client promise to cost and cash.</p>
+          <p className="lead">For boutique agencies that hire subcontractors, it links each client commitment to costs and client invoice milestones.</p>
           <div className="hero__actions">
-            <Link className="primary-action" to="/demo">Try it with sample data</Link>
+            <Link className="primary-action" to="/?demo=1">Try it with sample data</Link>
             <a className="inline-link" href="#how">See how the chain works</a>
           </div>
-          <p className="action-note">See a filled job chain. Change anything. Reset when finished.</p>
+          <p className="action-note">See a filled job chain. Add a cost, approve scope, or mark an invoice sent. Reset when finished.</p>
           <ul className="plain-facts" aria-label="Product facts">
             <li>No account for the demo.</li>
             <li>Demo changes are discarded.</li>
-            <li>Studio is $79 a month.</li>
+            <li>Planned Studio price: $79 each month.</li>
           </ul>
         </div>
         <div className="hero__art" aria-hidden="false"><LedgerIllustration /></div>
@@ -45,8 +45,8 @@ export function LandingPage() {
 
       <section className="preview-section section-shell" aria-labelledby="preview-title">
         <div className="section-heading">
-          <p className="eyebrow">One linked record</p>
-          <h2 id="preview-title">See promise, cost, and cash together.</h2>
+          <p className="eyebrow">Job margin preview</p>
+          <h2 id="preview-title">See commitment, cost, and invoice status together.</h2>
         </div>
         <article className="ledger-stack ledger-stack--preview">
           <header className="record-heading">
@@ -54,7 +54,7 @@ export function LandingPage() {
               <p className="record-kicker">Cinder &amp; Co. → Aster Bikes</p>
               <h3>Autumn launch films</h3>
             </div>
-            <span className="status-stamp status-stamp--warning">Check pending work</span>
+            <span className="status-stamp status-stamp--warning">Pending scope may change margin</span>
           </header>
           <div className="preview-chain">
             <div><span>Client commitment</span><strong>$24,000</strong></div>
@@ -70,20 +70,19 @@ export function LandingPage() {
 
       <section className="how-section section-shell" id="how" aria-labelledby="how-title">
         <div className="section-heading">
-          <p className="eyebrow">From promise to invoice</p>
-          <h2 id="how-title">Check the chain in three steps.</h2>
+          <h2 id="how-title">Track each job's margin in three steps.</h2>
         </div>
         <ol className="steps">
-          <li><span>01</span><div><h3>Record the promise.</h3><p>Add the client commitment, approved scope, and margin floor.</p></div></li>
+          <li><span>01</span><div><h3>Record the client commitment.</h3><p>Add the approved scope, client commitment, and margin floor.</p></div></li>
           <li><span>02</span><div><h3>Commit the cost.</h3><p>Link each subcontractor amount before the work starts.</p></div></li>
-          <li><span>03</span><div><h3>Watch the chain.</h3><p>See the change that puts margin at risk, then fix it before invoicing.</p></div></li>
+          <li><span>03</span><div><h3>Check the expected margin.</h3><p>See the change that puts margin at risk, then fix it before invoicing.</p></div></li>
         </ol>
       </section>
 
       <section className="limits-section section-shell" aria-labelledby="limits-title">
         <div>
-          <p className="eyebrow">Clear limits</p>
-          <h2 id="limits-title">A commercial record, not another project manager.</h2>
+          <p className="eyebrow">Demo and product limits</p>
+          <h2 id="limits-title">What this tool does not do.</h2>
         </div>
         <ul className="ruled-list">
           <li>Your demo workspace is isolated and expires within 24 hours.</li>
@@ -94,9 +93,9 @@ export function LandingPage() {
 
       <section className="pricing-section section-shell" id="pricing" aria-labelledby="pricing-title">
         <div className="section-heading">
-          <p className="eyebrow">Planned agency plans</p>
-          <h2 id="pricing-title">Price by active work, not seats.</h2>
-          <p>Accounts and checkout arrive in the next milestone.</p>
+          <p className="eyebrow">Planned pricing</p>
+          <h2 id="pricing-title">Planned pricing by active job chains.</h2>
+          <p>Accounts and checkout are not available in this demo release.</p>
         </div>
         <div className="price-ledger">
           <article>

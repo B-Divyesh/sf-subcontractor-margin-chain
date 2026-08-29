@@ -231,6 +231,16 @@ mod tests {
     }
 
     #[test]
+    fn claim_money_integrity_uses_integer_minor_units_and_rounds_up() {
+        let result = chain(Some(10_001), 7_500, 2_500).calculation();
+        assert_eq!(result.client_commitment_minor, Some(10_001));
+        assert_eq!(result.committed_cost_minor, 7_500);
+        assert_eq!(result.expected_margin_minor, Some(2_501));
+        assert_eq!(result.margin_floor_minor, Some(2_501));
+        assert_eq!(conservative_floor(10_001, 2_500), 2_501);
+    }
+
+    #[test]
     fn risk_boundaries_are_explicit() {
         let cases = [
             (None, 0, RiskState::Incomplete),
