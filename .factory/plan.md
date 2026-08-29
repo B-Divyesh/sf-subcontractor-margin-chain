@@ -5,7 +5,7 @@ Product: `subcontractor-margin-chain`
 Artifact: web with backend  
 Production URL: `https://subcontractor-margin-chain.sociobot.in`  
 Plan date: 2026-08-28  
-Status: **M1 perfection-loop round 3 repair implemented; final deployment verification pending**
+Status: **M1 perfection-loop round 3 passed; deployed and live-verified 2026-08-29**
 
 This plan is the build contract. A milestone builder reads this file, `.factory/design.md`, `.factory/demo.md`, `.factory/claims.json`, all prior handoffs, and the latest review notes before changing code. A milestone is not complete until its claims, tests, and definition of done pass from a clean checkout. Review and polish must pass before the next milestone begins.
 

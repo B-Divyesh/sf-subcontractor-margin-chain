@@ -1,0 +1,21 @@
+{
+  "url": "http://127.0.0.1:4173/",
+  "fetchTime": "2026-08-29T04:08:21.048Z",
+  "scores": {
+    "performance": 98,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100
+  },
+  "metrics": {
+    "firstContentfulPaintMs": 1921.2107,
+    "largestContentfulPaintMs": 2071.2107,
+    "cumulativeLayoutShift": 0.027148347653024943,
+    "totalBlockingTimeMs": 21.5,
+    "speedIndexMs": 1921.2107
+  },
+  "network": {
+    "requests": 7,
+    "totalBytes": 172095
+  }
+}

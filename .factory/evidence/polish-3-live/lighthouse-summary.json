@@ -1,0 +1,21 @@
+{
+  "url": "https://subcontractor-margin-chain.sociobot.in/?cold=lighthouse-daeafcd",
+  "fetchTime": "2026-08-29T04:16:12.124Z",
+  "scores": {
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100
+  },
+  "metrics": {
+    "firstContentfulPaintMs": 1650.713,
+    "largestContentfulPaintMs": 1650.713,
+    "cumulativeLayoutShift": 0.027148347653024943,
+    "totalBlockingTimeMs": 4,
+    "speedIndexMs": 1650.713
+  },
+  "network": {
+    "requests": 7,
+    "totalBytes": 167751
+  }
+}
