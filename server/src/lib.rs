@@ -51,6 +51,18 @@ pub fn app_with_state(static_dir: PathBuf, state: AppState) -> Router {
             "/demo/chains/{chain_id}",
             spa_route(index.clone(), StatusCode::OK),
         )
+        .route("/start", spa_route(index.clone(), StatusCode::OK))
+        .route("/app/chains", spa_route(index.clone(), StatusCode::OK))
+        .route("/app/chains/new", spa_route(index.clone(), StatusCode::OK))
+        .route(
+            "/app/chains/{chain_id}",
+            spa_route(index.clone(), StatusCode::OK),
+        )
+        .route(
+            "/access/{agency_id}/{member_id}",
+            spa_route(index.clone(), StatusCode::OK),
+        )
+        .route("/settings/team", spa_route(index.clone(), StatusCode::OK))
         .route("/privacy", spa_route(index.clone(), StatusCode::OK))
         .route("/terms", spa_route(index.clone(), StatusCode::OK))
         .route("/404", spa_route(index.clone(), StatusCode::NOT_FOUND))

@@ -1,5 +1,26 @@
 [
   {
+    "id": "real-agency-records",
+    "claim": "Creates saved agency job chains separately from the demo fixtures",
+    "where": "landing agency workspace section, /start, README",
+    "test": "cargo test --manifest-path server/Cargo.toml --test agency claim_real_agency_records_persist_without_demo_fixtures --locked",
+    "sandbox": "fresh application state; create an agency; assert its register starts empty, create a chain, and reload it"
+  },
+  {
+    "id": "real-tenant-isolation",
+    "claim": "One agency cannot read another agency's job chains",
+    "where": "privacy, real agency API",
+    "test": "cargo test --manifest-path server/Cargo.toml --test agency claim_real_agencies_are_tenant_isolated --locked",
+    "sandbox": "create two agency sessions; create a chain in one; assert the other register is empty"
+  },
+  {
+    "id": "agency-role-projection",
+    "claim": "Producer sessions cannot view subcontractor rates or add financial commitments",
+    "where": "real agency API and privacy policy",
+    "test": "cargo test --manifest-path server/Cargo.toml --test agency claim_agency_roles_hide_rates_and_block_financial_writes --locked",
+    "sandbox": "owner creates a chain and producer session; assert costs are absent and a cost write returns 403"
+  },
+  {
     "id": "m1-chain-math",
     "claim": "Shows client commitment, committed subcontractor cost, and expected margin in one job chain",
     "where": "landing preview, demo margin check, README",
@@ -84,11 +105,11 @@
     "sandbox": "inspect demo controls and response keys; assert prohibited capabilities are absent while invoice state marking remains"
   },
   {
-    "id": "m1-plan-prices",
-    "claim": "Planned Studio pricing is $79 monthly for 25 active job chains and Portfolio is $159 monthly for 100 active job chains",
-    "where": "landing pricing, README",
-    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-plan-prices",
-    "sandbox": "fresh landing page; assert both planned prices, both active-job limits, and no purchase action"
+    "id": "real-workspace-onboarding",
+    "claim": "Creates a saved agency workspace from the landing page",
+    "where": "landing agency workspace section, /start",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:real-workspace-onboarding",
+    "sandbox": "fresh browser; open /start from landing; create an agency; assert the empty saved register appears"
   },
   {
     "id": "m1-demo-cookie",

@@ -97,6 +97,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+function appMode() {
+  return window.location.pathname.startsWith("/app") || window.location.pathname === "/start";
+}
+
+function chainApi() {
+  return appMode() ? "/api/v1/app" : "/api/v1/demo";
+}
+
+export type Agency = { name: string; role: "owner" };
+
+export function createAgency(name: string): Promise<Agency> {
+  return request("/api/v1/app/agency", { method: "POST", body: JSON.stringify({ name }) });
+}
+
+export function getAgency(): Promise<Agency> {
+  return request("/api/v1/app/agency");
+}
+
+export type MemberInvite = { id: string; role: "finance" | "producer" | "viewer"; access_path: string };
+export function addMember(name: string, role: MemberInvite["role"]): Promise<MemberInvite> {
+  return request("/api/v1/app/members", { method: "POST", body: JSON.stringify({ name, role }) });
+}
+
 export async function createWorkspace(): Promise<void> {
   await request("/api/v1/demo/workspaces", { method: "POST" });
 }
@@ -106,14 +129,14 @@ export async function ensureWorkspace(): Promise<void> {
 }
 
 export async function listChains(): Promise<JobChain[]> {
-  await createWorkspace();
-  const result = await request<{ chains: JobChain[] }>("/api/v1/demo/chains");
+  if (!appMode()) await createWorkspace();
+  const result = await request<{ chains: JobChain[] }>(`${chainApi()}/chains`);
   return result.chains;
 }
 
 export async function getChain(id: string): Promise<JobChain> {
-  await createWorkspace();
-  return request<JobChain>(`/api/v1/demo/chains/${encodeURIComponent(id)}`);
+  if (!appMode()) await createWorkspace();
+  return request<JobChain>(`${chainApi()}/chains/${encodeURIComponent(id)}`);
 }
 
 export type NewChainInput = {
@@ -129,8 +152,8 @@ export type NewChainInput = {
 };
 
 export async function createChain(input: NewChainInput, idempotencyKey: string = crypto.randomUUID()): Promise<JobChain> {
-  await ensureWorkspace();
-  return request("/api/v1/demo/chains", {
+  if (!appMode()) await ensureWorkspace();
+  return request(`${chainApi()}/chains`, {
     method: "POST",
     headers: { "idempotency-key": idempotencyKey },
     body: JSON.stringify(input),
@@ -141,7 +164,7 @@ export function addCost(
   chainId: string,
   input: { subcontractor: string; role: string; amount_minor: number },
 ): Promise<JobChain> {
-  return request(`/api/v1/demo/chains/${encodeURIComponent(chainId)}/costs`, {
+  return request(`${chainApi()}/chains/${encodeURIComponent(chainId)}/costs`, {
     method: "POST",
     headers: { "idempotency-key": crypto.randomUUID() },
     body: JSON.stringify(input),
@@ -150,7 +173,7 @@ export function addCost(
 
 export function approveScope(chainId: string, scopeId: string): Promise<JobChain> {
   return request(
-    `/api/v1/demo/chains/${encodeURIComponent(chainId)}/scopes/${encodeURIComponent(scopeId)}`,
+    `${chainApi()}/chains/${encodeURIComponent(chainId)}/scopes/${encodeURIComponent(scopeId)}`,
     { method: "PATCH", body: JSON.stringify({ status: "approved" }) },
   );
 }
@@ -161,7 +184,7 @@ export function updateMilestone(
   status: MilestoneStatus,
 ): Promise<JobChain> {
   return request(
-    `/api/v1/demo/chains/${encodeURIComponent(chainId)}/milestones/${encodeURIComponent(milestoneId)}`,
+    `${chainApi()}/chains/${encodeURIComponent(chainId)}/milestones/${encodeURIComponent(milestoneId)}`,
     { method: "PATCH", body: JSON.stringify({ status }) },
   );
 }

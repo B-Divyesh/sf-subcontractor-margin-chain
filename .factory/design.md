@@ -126,3 +126,7 @@ The CSV import screen uses the same ruled paper, carbon accents, tight radii, an
 - **Offline:** the demo explains that unsent edits remain in the demo namespace; signed-in work is read-only until the API returns unless an offline mutation queue has been proven.
 - **Permission denied:** name the hidden category without leaking values: “Your role cannot view subcontractor rates. Ask an owner or finance member.”
 - **At risk:** state the amount and cause, not only “warning”: “Expected margin is $1,250 below this job’s floor after the design revision.”
+
+## Polish 2 additions
+
+`/start`, `/app/chains`, and `/settings/team` reuse the ledger surface rather than introducing account-dashboard chrome. The real workspace begins as a clean unstacked sheet, while the demo retains its cyan/red sample stack and explicit banner. The team screen uses written role consequences beside the access-link action. On small screens these routes keep the same 16px gutters, single-column form treatment, and wrapping access-link text; no real-record control is hidden behind the demo banner.

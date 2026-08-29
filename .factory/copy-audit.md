@@ -14,7 +14,7 @@ Audited: 2026-08-29 from `src/routes/LandingPage.tsx` and the shared footer. Cur
 | Action note | Reset when finished. | 3 | Pass |
 | Fact | No account for the demo. | 5 | Pass |
 | Fact | Demo changes are discarded. | 4 | Pass |
-| Fact | Planned Studio price: $79 each month. | 6 | Pass |
+| Fact | Start a saved agency workspace. | 5 | Pass |
 | Preview label | Job margin preview | 3 | Pass |
 | Preview heading | See commitment, cost, and invoice status together. | 7 | Pass |
 | Preview status | Pending scope may change margin | 5 | Pass |
@@ -30,15 +30,12 @@ Audited: 2026-08-29 from `src/routes/LandingPage.tsx` and the shared footer. Cur
 | Limits heading | What this tool does not do. | 6 | Pass |
 | Privacy | Your demo workspace is isolated and expires within 24 hours. | 10 | Pass |
 | Demo guidance | The sample uses fictional names and values. | 7 | Pass |
-| Demo guidance | Do not enter client data. | 5 | Pass |
+| Demo guidance | Enter real data only in your agency workspace. | 8 | Pass |
 | Limit | We do not calculate payroll tax or decide worker status. | 10 | Pass |
-| Pricing label | Planned pricing | 2 | Pass |
-| Pricing heading | Planned pricing by active job chains. | 6 | Pass |
-| Billing note | Accounts and checkout are not available in this demo release. | 10 | Pass |
-| Studio price | $79 per agency each month | 5 | Pass |
-| Studio allowance | Keep up to 25 job chains active. | 7 | Pass |
-| Portfolio price | $159 per agency each month | 5 | Pass |
-| Portfolio allowance | Keep up to 100 job chains active. | 7 | Pass |
+| Workspace label | Agency workspace | 2 | Pass |
+| Workspace heading | Save real job chains for your agency. | 7 | Pass |
+| Workspace note | Create a workspace, then add real job chains separately from the sample. | 11 | Pass |
+| Workspace action | Create your agency workspace | 5 | Pass |
 | Footer | Keep each client commitment, subcontractor cost, and margin in one job chain. | 12 | Pass |
 
 No sentence exceeds 22 words. No rendered sentence contains a banned marketing word.

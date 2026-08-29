@@ -25,7 +25,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=api-builder /src/server/target/release/subcontractor-margin-chain-server /app/server
 COPY --from=web-builder /src/dist /app/dist
-RUN mkdir -p /data/demo-workspaces \
+RUN mkdir -p /data/demo-workspaces /data/agency-workspaces \
     && chown -R app:app /app /data
 USER app
 ENV PORT=8080

@@ -6,6 +6,8 @@ import { LandingPage } from "../routes/LandingPage";
 import { ImportPage } from "../routes/ImportPage";
 import { NotFoundPage, PrivacyPage, TermsPage } from "../routes/LegalPages";
 import { NewChainPage } from "../routes/NewChainPage";
+import { StartPage } from "../routes/StartPage";
+import { TeamPage } from "../routes/TeamPage";
 
 export function App() {
   return (
@@ -17,6 +19,11 @@ export function App() {
           <Route path="demo/import" element={<ImportPage />} />
           <Route path="demo/chains/new" element={<NewChainPage />} />
           <Route path="demo/chains/:chainId" element={<ChainPage />} />
+          <Route path="start" element={<StartPage />} />
+          <Route path="app/chains" element={<DemoPage />} />
+          <Route path="app/chains/new" element={<NewChainPage />} />
+          <Route path="app/chains/:chainId" element={<ChainPage />} />
+          <Route path="settings/team" element={<TeamPage />} />
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="404" element={<NotFoundPage />} />

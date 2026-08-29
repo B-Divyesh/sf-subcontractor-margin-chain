@@ -81,9 +81,8 @@ test("public and demo routes and both dialogs run without console or page errors
   await page.getByRole("button", { name: "Reset demo" }).click();
   await expect(page.getByRole("dialog", { name: "Reset the sample?" })).toBeVisible();
   await page.getByRole("button", { name: "Keep my changes" }).click();
-  await page.getByRole("button", { name: "See planned real-work features" }).click();
-  await expect(page.getByRole("dialog", { name: "Real agency work is planned" })).toBeVisible();
-  await page.getByRole("button", { name: "Return to the demo" }).click();
+  await page.getByRole("link", { name: "Start for real" }).click();
+  await expect(page.getByRole("heading", { name: "Create your agency workspace." })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

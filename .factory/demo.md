@@ -10,7 +10,7 @@ Local verification uses `http://127.0.0.1:8080/demo` after building the web app 
 
 ## Isolation
 
-M1 creates an opaque, random demo workspace through `POST /api/v1/demo/workspaces`. Repeating that call with a valid cookie returns the current workspace without replacing it. Its identifier lives in an `HttpOnly`, `SameSite=Lax`, `Secure` cookie on HTTPS and expires after at most 24 hours. Production uses a private Azure Blob container through the Container App managed identity, so every replica reads the same durable workspace. Local containers use `/data/demo-workspaces`. No signed-in tenant repository exists in M1. Never copy a demo object into real data automatically.
+The demo creates an opaque, random workspace through `POST /api/v1/demo/workspaces`. Repeating that call with a valid cookie returns the current workspace without replacing it. Its identifier lives in an `HttpOnly`, `SameSite=Lax`, `Secure` cookie on HTTPS and expires after at most 24 hours. Production uses a private Azure Blob container through the Container App managed identity, so every replica reads the same durable workspace. Local containers use `/data/demo-workspaces`. The real agency workspace uses a distinct permanent record and `smc_agency`/`smc_agency_member` session cookies. It starts empty and is never seeded, read, or reset by demo actions. Never copy a demo object into real data automatically.
 
 `sessionStorage` may store presentation preferences under `smc:demo:v1:*`. It is not the record source. Production storage keys and API routes never load while the demo banner is present.
 
@@ -48,12 +48,12 @@ All money fixtures are stored as integer cents with `USD`. M1 does not convert c
 
 ## Reset and exit
 
-The persistent banner reads “Demo — sample data, nothing is saved” and offers “Reset demo” and “See planned real-work features.” Reset requires a compact confirmation because it discards edits, destroys the current workspace, creates a newly seeded workspace, and returns focus to the page heading. The planning action explains that accounts, permanent records, roles, and checkout are unavailable in this release. From M2 onward it may start Entra sign-in and organization onboarding; it never imports the sample.
+The persistent banner reads “Demo — sample data, nothing is saved” and offers “Reset demo” and “Start for real.” Reset requires a compact confirmation because it discards edits, destroys the current workspace, creates a newly seeded workspace, and returns focus to the page heading. “Start for real” opens `/start`, which creates an empty agency workspace; it never imports the sample.
 
 `/demo/import` reads a selected CSV in the browser, maps columns, and shows a validation dry run before sending valid rows to the demo API. The bundled two-job CSV provides a one-click claim fixture. The register exports the current demo workspace as browser-generated CSV or JSON. These tools never read or write a real tenant.
 
 ## Verification
 
-Every M1 claim starts in a new Playwright browser context and uses only `/demo` and these fixtures. Tests must prove reset invalidates the old workspace, demo requests stay under `/api/v1/demo/`, no CIAM or billing request occurs, and no signed-in tenant endpoint is requested.
+Every demo claim starts in a new Playwright browser context and uses only `/demo` and these fixtures. Real-work claims create independent agency sessions and verify that records and rate projections cannot cross that boundary.
 
 Run all desktop and 390px claim flows with `npm run test:e2e`. Run one claim with the exact command recorded in `.factory/claims.json`.

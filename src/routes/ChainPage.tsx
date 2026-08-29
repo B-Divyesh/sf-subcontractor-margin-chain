@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import {
   addCost,
   ApiProblem,
@@ -14,6 +14,8 @@ import { dollarsToMinor, formatMoney } from "../features/chains/model";
 
 export function ChainPage() {
   const { chainId = "" } = useParams();
+  const isReal = useLocation().pathname.startsWith("/app");
+  const base = isReal ? "/app/chains" : "/demo";
   const revision = useDemoRevision();
   const [chain, setChain] = useState<JobChain | null>(null);
   const [error, setError] = useState("");
@@ -128,7 +130,7 @@ export function ChainPage() {
         <h1 tabIndex={-1}>{notFound ? "Job chain not found" : "This job did not load"}</h1>
         <FeedbackPanel title={notFound ? "Return to the job register" : "Check the connection"} kind="error">
           <p>{error}</p>
-          {notFound ? <Link className="primary-action" to="/demo">View sample jobs</Link> : <button className="secondary-action" type="button" onClick={() => setRetry((value) => value + 1)}>Try loading again</button>}
+          {notFound ? <Link className="primary-action" to={base}>View job chains</Link> : <button className="secondary-action" type="button" onClick={() => setRetry((value) => value + 1)}>Try loading again</button>}
         </FeedbackPanel>
       </main>
     );
@@ -145,11 +147,11 @@ export function ChainPage() {
 
   return (
     <main id="main" className="app-main section-shell">
-      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/demo">Job register</Link><span aria-hidden="true">/</span><span>{chain.name}</span></nav>
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to={base}>Job register</Link><span aria-hidden="true">/</span><span>{chain.name}</span></nav>
       <header className="page-heading chain-heading">
         <p className="eyebrow">{chain.contracting_client}{chain.end_client ? ` → ${chain.end_client}` : ""}</p>
         <h1 tabIndex={-1}>{chain.name}</h1>
-        <p>Northline Studio · demo owner</p>
+        <p>{isReal ? "Saved agency record" : "Northline Studio · demo owner"}</p>
       </header>
       {receipt && <p ref={receiptRef} className="action-receipt" role="status" tabIndex={-1}>{receipt}</p>}
       {actionError && <p className="form-error action-error" role="alert">{actionError}</p>}

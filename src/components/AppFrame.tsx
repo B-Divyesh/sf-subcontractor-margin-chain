@@ -15,6 +15,10 @@ const titles: Array<[RegExp, string, string]> = [
   [/^\/demo\/import$/, "Import demo jobs — Subcontractor Margin Chain", "Map spreadsheet columns and preview sample job chains before importing them."],
   [/^\/demo\/chains\/new$/, "New demo job — Subcontractor Margin Chain", "Add a sample job chain and check its margin."],
   [/^\/demo\/chains\//, "Demo job — Subcontractor Margin Chain", "Review a sample job’s commitment, scope, costs, invoice milestones, and margin."],
+  [/^\/start$/, "Set up your agency — Subcontractor Margin Chain", "Create a saved agency workspace for real job chains."],
+  [/^\/app\/chains\/new$/, "New job chain — Subcontractor Margin Chain", "Add a saved job chain and check its margin."],
+  [/^\/app\/chains\//, "Job chain — Subcontractor Margin Chain", "Review a saved job’s commitment, scope, costs, invoice milestones, and margin."],
+  [/^\/app\/chains$/, "Job chains — Subcontractor Margin Chain", "Review saved agency job chains and expected margins."],
   [/^\/privacy$/, "Privacy — Subcontractor Margin Chain", "How the public site and isolated demo handle data."],
   [/^\/terms$/, "Terms — Subcontractor Margin Chain", "Terms for using the public site and sample demo."],
   [/./, "Page not found — Subcontractor Margin Chain", "Return to Subcontractor Margin Chain or open the sample demo."],
@@ -26,7 +30,6 @@ export function AppFrame() {
   const inDemo = location.pathname.startsWith("/demo");
   const [revision, setRevision] = useState(0);
   const [resetOpen, setResetOpen] = useState(false);
-  const [startOpen, setStartOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState("");
   const page = titles.find(([pattern]) => pattern.test(location.pathname)) ?? titles.at(-1)!;
@@ -55,6 +58,16 @@ export function AppFrame() {
       navigate("/demo", { replace: true });
     }
   }, [location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    const match = location.pathname.match(/^\/access\/([^/]+)\/([^/]+)$/);
+    if (!match) return;
+    const [, agencyId, memberId] = match;
+    if (!agencyId || !memberId) return;
+    fetch(`/api/v1/app/access/${encodeURIComponent(agencyId)}/${encodeURIComponent(memberId)}`, { credentials: "same-origin" })
+      .then((response) => { if (!response.ok) throw new Error(); navigate("/app/chains", { replace: true }); })
+      .catch(() => navigate("/start", { replace: true }));
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (!location.hash) return;
@@ -90,6 +103,7 @@ export function AppFrame() {
           </Link>
           <nav aria-label="Main navigation">
             <Link to="/demo">Demo</Link>
+            {location.pathname.startsWith("/app") && <Link to="/settings/team">Team</Link>}
             <Link to="/#how">How it works</Link>
             <Link to="/#pricing">Pricing</Link>
             <Link to="/privacy">Privacy</Link>
@@ -101,7 +115,7 @@ export function AppFrame() {
           <p><strong>Demo</strong> — sample data, nothing is saved</p>
           <div className="button-row">
             <button className="text-button" type="button" onClick={() => setResetOpen(true)}>Reset demo</button>
-            <button className="text-button" type="button" onClick={() => setStartOpen(true)}>See planned real-work features</button>
+            <Link className="text-button" to="/start">Start for real</Link>
           </div>
         </div>
       )}
@@ -134,15 +148,6 @@ export function AppFrame() {
             </div>
       </NativeDialog>
 
-      <NativeDialog open={startOpen} onClose={() => setStartOpen(false)} ariaLabelledBy="start-title" ariaDescribedBy="start-description">
-            <h2 id="start-title">Real agency work is planned</h2>
-            <p id="start-description">
-              Accounts, permanent agency records, team roles, and checkout are not available in this demo release.
-            </p>
-            <div className="button-row button-row--end">
-              <button className="primary-action" type="button" onClick={() => setStartOpen(false)}>Return to the demo</button>
-            </div>
-      </NativeDialog>
     </DemoContext.Provider>
   );
 }

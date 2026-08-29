@@ -37,7 +37,7 @@ export function LandingPage() {
           <ul className="plain-facts" aria-label="Product facts">
             <li>No account for the demo.</li>
             <li>Demo changes are discarded.</li>
-            <li>Planned Studio price: $79 each month.</li>
+            <li>Start a saved agency workspace.</li>
           </ul>
         </div>
         <div className="hero__art" aria-hidden="false"><LedgerIllustration /></div>
@@ -86,27 +86,26 @@ export function LandingPage() {
         </div>
         <ul className="ruled-list">
           <li>Your demo workspace is isolated and expires within 24 hours.</li>
-          <li>The sample uses fictional names and values. Do not enter client data.</li>
+          <li>The sample uses fictional names and values. Enter real data only in your agency workspace.</li>
           <li>We do not calculate payroll tax or decide worker status.</li>
         </ul>
       </section>
 
       <section className="pricing-section section-shell" id="pricing" aria-labelledby="pricing-title">
         <div className="section-heading">
-          <p className="eyebrow">Planned pricing</p>
-          <h2 id="pricing-title">Planned pricing by active job chains.</h2>
-          <p>Accounts and checkout are not available in this demo release.</p>
+          <p className="eyebrow">Agency workspace</p>
+          <h2 id="pricing-title">Save real job chains for your agency.</h2>
+          <p>Create a workspace, then add real job chains separately from the sample.</p>
         </div>
         <div className="price-ledger">
           <article>
-            <h3>Studio</h3>
-            <p className="price"><strong>$79</strong> per agency each month</p>
-            <p>Keep up to 25 job chains active.</p>
+            <h3>Start now</h3>
+            <p className="price"><strong>Saved</strong> agency records</p>
+            <p><Link className="inline-link" to="/start">Create your agency workspace</Link></p>
           </article>
           <article>
-            <h3>Portfolio</h3>
-            <p className="price"><strong>$159</strong> per agency each month</p>
-            <p>Keep up to 100 job chains active.</p>
+            <h3>Keep the sample separate</h3>
+            <p>Use the demo to test the workflow.</p>
           </article>
         </div>
       </section>

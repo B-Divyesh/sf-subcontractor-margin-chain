@@ -9,6 +9,9 @@ describe("public claim registry", () => {
     const ids = claims.map((claim) => claim.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
+      "real-agency-records",
+      "real-tenant-isolation",
+      "agency-role-projection",
       "m1-chain-math",
       "m1-margin-risk",
       "m1-linked-status",
@@ -21,7 +24,7 @@ describe("public claim registry", () => {
       "m1-csv-import",
       "m1-data-export",
       "m1-product-boundaries",
-      "m1-plan-prices",
+      "real-workspace-onboarding",
       "m1-demo-cookie",
       "m1-shared-replica-persistence",
       "m1-port-only-startup",

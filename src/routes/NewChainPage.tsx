@@ -1,5 +1,5 @@
 import { type FormEvent, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiProblem, createChain } from "../api/client";
 import { dollarsToMinor, formatMoney, localCalculation } from "../features/chains/model";
 
@@ -29,6 +29,9 @@ const initialDraft: Draft = {
 
 export function NewChainPage() {
   const navigate = useNavigate();
+  const isReal = useLocation().pathname.startsWith("/app");
+  const base = isReal ? "/app/chains" : "/demo";
+  const chainBase = isReal ? "/app/chains" : "/demo/chains";
   const [draft, setDraft] = useState(initialDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -86,7 +89,7 @@ export function NewChainPage() {
         cost_role: draft.role,
         cost_minor: cost!,
       });
-      navigate(`/demo/chains/${chain.id}`);
+      navigate(`${chainBase}/${chain.id}`);
     } catch (problem) {
       const message = problem instanceof Error ? problem.message : "The job chain could not be saved. Try again.";
       setServerError(message);
@@ -101,9 +104,9 @@ export function NewChainPage() {
 
   return (
     <main id="main" className="app-main section-shell">
-      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/demo">Job register</Link><span aria-hidden="true">/</span><span>New job</span></nav>
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to={base}>Job register</Link><span aria-hidden="true">/</span><span>New job</span></nav>
       <header className="page-heading">
-        <p className="eyebrow">Northline Studio · demo workspace</p>
+        <p className="eyebrow">{isReal ? "Saved agency workspace" : "Northline Studio · demo workspace"}</p>
         <h1 tabIndex={-1}>Add a job chain</h1>
         <p>Record the client commitment and first committed cost before work starts.</p>
       </header>
@@ -151,7 +154,7 @@ export function NewChainPage() {
           </fieldset>
           <div className="button-row">
             <button className="primary-action" type="submit" disabled={saving}>{saving ? "Creating job chain…" : "Create job chain"}</button>
-            <Link className="secondary-action" to="/demo">Cancel</Link>
+            <Link className="secondary-action" to={base}>Cancel</Link>
           </div>
         </form>
 

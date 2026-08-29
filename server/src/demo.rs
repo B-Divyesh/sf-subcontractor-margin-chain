@@ -20,6 +20,7 @@ pub const DEMO_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 #[derive(Clone)]
 pub struct AppState {
     pub demo: DemoStore,
+    pub agency: DemoStore,
     pub rate_limits: RateLimits,
     pub metrics: Metrics,
 }
@@ -27,9 +28,11 @@ pub struct AppState {
 impl AppState {
     pub fn production() -> Self {
         let demo = DemoStore::production();
+        let agency = DemoStore::agency_production();
         Self {
             rate_limits: RateLimits::for_store(&demo),
             demo,
+            agency,
             metrics: Metrics::default(),
         }
     }
@@ -37,6 +40,7 @@ impl AppState {
     pub fn with_demo(demo: DemoStore) -> Self {
         Self {
             rate_limits: RateLimits::for_store(&demo),
+            agency: demo.clone(),
             demo,
             metrics: Metrics::default(),
         }
@@ -67,8 +71,30 @@ enum StoreBackend {
 pub struct Workspace {
     pub id: String,
     pub expires_at_epoch_seconds: u64,
+    #[serde(default)]
+    pub permanent: bool,
+    #[serde(default)]
+    pub agency_name: Option<String>,
+    #[serde(default)]
+    pub members: Vec<AgencyMember>,
     pub chains: Vec<JobChain>,
     pub idempotency: HashMap<String, IdempotentResult>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct AgencyMember {
+    pub id: String,
+    pub name: String,
+    pub role: AgencyRole,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AgencyRole {
+    Owner,
+    Finance,
+    Producer,
+    Viewer,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -87,6 +113,13 @@ pub struct WorkspaceCreated {
 }
 
 impl DemoStore {
+    pub fn agency_production() -> Self {
+        if let Some(path) = std::env::var_os("AGENCY_DATA_DIR").map(PathBuf::from) {
+            return Self::filesystem(&path).unwrap_or_else(|error| { tracing::warn!(?path, %error, "configured agency directory unavailable; using isolated local storage"); Self::memory() });
+        }
+        let path = PathBuf::from("/data/agency-workspaces");
+        Self::filesystem(&path).unwrap_or_else(|error| { tracing::warn!(?path, %error, "durable agency directory unavailable; using isolated local storage"); Self::memory() })
+    }
     pub fn memory() -> Self {
         Self {
             backend: Arc::new(StoreBackend::MemoryState(RwLock::new(HashMap::new()))),
@@ -147,6 +180,9 @@ impl DemoStore {
         let workspace = Workspace {
             id: id.clone(),
             expires_at_epoch_seconds,
+            permanent: false,
+            agency_name: None,
+            members: Vec::new(),
             chains: seeded_chains(),
             idempotency: HashMap::new(),
         };
@@ -157,6 +193,29 @@ impl DemoStore {
                 expires_at: expires_at_epoch_seconds,
             },
         ))
+    }
+
+    /// A real agency record deliberately uses a separate cookie and route tree,
+    /// but shares the battle-tested durable store implementation with the demo.
+    /// It never expires and it never receives the seeded fictional records.
+    pub async fn create_agency(&self, agency_name: String) -> Result<(String, String), StoreError> {
+        let id = new_id();
+        let member_id = new_id();
+        let workspace = Workspace {
+            id: id.clone(),
+            expires_at_epoch_seconds: u64::MAX,
+            permanent: true,
+            agency_name: Some(agency_name),
+            members: vec![AgencyMember {
+                id: member_id.clone(),
+                name: "Owner".into(),
+                role: AgencyRole::Owner,
+            }],
+            chains: Vec::new(),
+            idempotency: HashMap::new(),
+        };
+        self.insert_new(&workspace).await?;
+        Ok((id, member_id))
     }
 
     pub async fn exists(&self, id: &str) -> bool {
@@ -175,7 +234,7 @@ impl DemoStore {
         let Some(workspace) = workspace else {
             return Ok(None);
         };
-        if workspace.expires_at_epoch_seconds <= epoch_seconds() {
+        if !workspace.permanent && workspace.expires_at_epoch_seconds <= epoch_seconds() {
             let _ = self.remove(id).await;
             return Ok(None);
         }
@@ -197,7 +256,7 @@ impl DemoStore {
                 let Some(workspace) = store.get_mut(id) else {
                     return Ok(None);
                 };
-                if workspace.expires_at_epoch_seconds <= epoch_seconds() {
+                if !workspace.permanent && workspace.expires_at_epoch_seconds <= epoch_seconds() {
                     store.remove(id);
                     return Ok(None);
                 }
@@ -234,7 +293,9 @@ impl DemoStore {
             StoreBackend::MemoryState(store) => {
                 let mut store = store.write().expect("demo store poisoned");
                 let before = store.len();
-                store.retain(|_, workspace| workspace.expires_at_epoch_seconds > now);
+                store.retain(|_, workspace| {
+                    workspace.permanent || workspace.expires_at_epoch_seconds > now
+                });
                 Ok(before - store.len())
             }
             StoreBackend::Filesystem(path) => {
@@ -252,9 +313,9 @@ impl DemoStore {
                     else {
                         continue;
                     };
-                    if read_file_workspace(path, &id)?
-                        .is_some_and(|workspace| workspace.expires_at_epoch_seconds <= now)
-                        && self.remove(&id).await?
+                    if read_file_workspace(path, &id)?.is_some_and(|workspace| {
+                        !workspace.permanent && workspace.expires_at_epoch_seconds <= now
+                    }) && self.remove(&id).await?
                     {
                         removed += 1;
                     }
@@ -362,7 +423,7 @@ where
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes)?;
     let mut workspace: Workspace = serde_json::from_slice(&bytes)?;
-    if workspace.expires_at_epoch_seconds <= epoch_seconds() {
+    if !workspace.permanent && workspace.expires_at_epoch_seconds <= epoch_seconds() {
         return Ok(None);
     }
     match operation(&mut workspace) {
@@ -679,7 +740,7 @@ impl AzureBlobStore {
             let Some((mut workspace, etag)) = self.get(id).await? else {
                 return Ok(None);
             };
-            if workspace.expires_at_epoch_seconds <= epoch_seconds() {
+            if !workspace.permanent && workspace.expires_at_epoch_seconds <= epoch_seconds() {
                 let _ = self.remove(id).await;
                 return Ok(None);
             }
@@ -762,11 +823,9 @@ impl AzureBlobStore {
             let Some(id) = item.name.strip_suffix(".json") else {
                 continue;
             };
-            if self
-                .get(id)
-                .await?
-                .is_some_and(|(workspace, _)| workspace.expires_at_epoch_seconds <= now)
-                && self.remove(id).await?
+            if self.get(id).await?.is_some_and(|(workspace, _)| {
+                !workspace.permanent && workspace.expires_at_epoch_seconds <= now
+            }) && self.remove(id).await?
             {
                 removed += 1;
             }

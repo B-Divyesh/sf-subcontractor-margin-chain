@@ -219,15 +219,12 @@ test("@claim:m1-public-privacy keeps the public and demo flow on this origin", a
   expect(await page.locator('[data-analytics], script[src*="analytics"], script[src*="segment"], script[src*="plausible"]').count()).toBe(0);
 });
 
-test("@claim:m1-plan-prices shows exact planned prices without a purchase action", async ({ page }) => {
+test("@claim:real-workspace-onboarding creates a saved agency workspace", async ({ page }) => {
   await page.goto("/");
-  const pricing = page.locator("#pricing");
-  await expect(pricing).toContainText("Studio");
-  await expect(pricing).toContainText("$79 per agency each month");
-  await expect(pricing).toContainText("25 job chains active");
-  await expect(pricing).toContainText("Portfolio");
-  await expect(pricing).toContainText("$159 per agency each month");
-  await expect(pricing).toContainText("100 job chains active");
-  await expect(pricing.getByRole("link", { name: /buy|subscribe|checkout/i })).toHaveCount(0);
-  await expect(pricing.getByRole("button", { name: /buy|subscribe|checkout/i })).toHaveCount(0);
+  await page.getByRole("link", { name: "Create your agency workspace" }).click();
+  await page.getByLabel("Agency name").fill("Juniper Agency");
+  await page.getByRole("button", { name: "Create agency workspace" }).click();
+  await expect(page).toHaveURL(/\/app\/chains$/);
+  await expect(page.getByRole("heading", { name: "Job margin register" })).toBeVisible();
+  await expect(page.getByText("No job chains yet")).toBeVisible();
 });

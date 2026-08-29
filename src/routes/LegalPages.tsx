@@ -5,15 +5,20 @@ export function PrivacyPage() {
     <main id="main" className="legal-page section-shell">
       <p className="eyebrow">Last updated 28 August 2026</p>
       <h1 tabIndex={-1}>Privacy in plain words</h1>
-      <p className="lead">The public site does not track you. The demo keeps only its isolated sample workspace.</p>
+      <p className="lead">The public site does not track you. The demo and agency workspace use separate records.</p>
       <section>
         <h2>What the demo stores</h2>
         <p>The server creates a random demo workspace when you open the sample. It stores sample edits in shared storage for up to 24 hours.</p>
         <p>An HttpOnly cookie identifies that workspace. The cookie cannot identify you outside this product.</p>
       </section>
       <section>
+        <h2>What an agency workspace stores</h2>
+        <p>Your saved job chains stay in the agency workspace. The owner session can add finance, producer, or viewer access.</p>
+        <p>Producer and viewer sessions do not receive subcontractor commitment amounts. Do not enter real client or subcontractor details in the demo.</p>
+      </section>
+      <section>
         <h2>What we do not collect</h2>
-        <p>This release has no accounts, analytics, advertising pixels, or payment form. Do not enter real client or subcontractor details in the demo.</p>
+        <p>This release has no analytics, advertising pixels, or payment form.</p>
         <p>CSV files are read in your browser. Valid rows go only to your isolated demo workspace when you choose to import them.</p>
       </section>
       <section>
@@ -33,8 +38,8 @@ export function TermsPage() {
   return (
     <main id="main" className="legal-page section-shell">
       <p className="eyebrow">Last updated 28 August 2026</p>
-      <h1 tabIndex={-1}>Terms for the sample demo</h1>
-      <p className="lead">Use this demo to test job-margin records with original fictional data.</p>
+      <h1 tabIndex={-1}>Terms for Margin Chain</h1>
+      <p className="lead">Use the demo for fictional records and the agency workspace for real job chains.</p>
       <section>
         <h2>The demo is not an accounting service</h2>
         <p>The demo records commitments and client invoice milestones. It does not send invoices, collect money, calculate tax, or decide worker status.</p>
@@ -42,10 +47,6 @@ export function TermsPage() {
       <section>
         <h2>Your sample edits are temporary</h2>
         <p>Demo workspaces expire within 24 hours. Reset removes them sooner. Do not rely on the demo as permanent storage.</p>
-      </section>
-      <section>
-        <h2>Subscriptions are not sold in this release</h2>
-        <p>The prices are planned. There is no purchase action until accounts and hosted checkout work.</p>
       </section>
       <section>
         <h2>Acceptable use</h2>

@@ -17,9 +17,9 @@ The demo starts with three original fictional Northline Studio jobs. Their prove
 
 Planned Studio pricing is $79 per agency each month for 25 active job chains. Portfolio is planned at $159 for 100 active job chains.
 
-## Not available yet
+## Real agency workspace
 
-Accounts, permanent agency records, team roles, and hosted checkout are planned for the next milestone. Sign-in and purchase controls stay hidden until they work.
+Open `/start` to create a saved agency workspace. Real job chains use a separate session and never load the demo fixtures.
 
 ## Stack
 
@@ -55,10 +55,6 @@ npm run check
 ```
 
 Playwright 1.58.2 runs browser claims on desktop Chromium and a 390px Chromium profile.
-
-It checks keyboard use, route focus, deep links, 200% text zoom, dialog console errors, and internal links. It also checks serious and critical axe findings.
-
-Every public claim and exact command is listed in [`.factory/claims.json`](.factory/claims.json). The Vitest registry test rejects missing or duplicate claim IDs.
 
 ## Demo API
 

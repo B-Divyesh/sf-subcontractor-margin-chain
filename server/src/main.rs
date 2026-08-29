@@ -41,7 +41,7 @@ async fn main() {
     info!(
         %address,
         ?static_dir,
-        demo_store = state.demo.backend_name(),
+        demo_store = state.demo.backend_name(), agency_store = state.agency.backend_name(),
         build_sha = routes_build_sha(),
         "server started; runtime config supplied: PORT/STATIC_DIR or defaults; demo persistence selected automatically; generated secrets: none in M1"
     );

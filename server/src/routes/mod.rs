@@ -1,7 +1,7 @@
 use crate::{
     demo::{
-        AppState, IdempotentResult, Mutation, NewChain, RateLimitError, StoreError,
-        WorkspaceCreated,
+        AgencyMember, AgencyRole, AppState, IdempotentResult, Mutation, NewChain, RateLimitError,
+        StoreError, WorkspaceCreated,
     },
     domain::{
         new_id, CostCommitment, CostState, JobChain, MarginCalculation, MilestoneStatus,
@@ -21,6 +21,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 const COOKIE_NAME: &str = "smc_demo";
+const AGENCY_COOKIE_NAME: &str = "smc_agency";
 
 #[derive(Serialize)]
 struct HealthResponse {
@@ -167,6 +168,213 @@ pub fn api_router() -> Router<AppState> {
             "/api/v1/demo/chains/{chain_id}/milestones/{milestone_id}",
             patch(update_milestone),
         )
+        // The app routes intentionally use a different cookie and are never
+        // provisioned from demo fixtures. The handlers share domain validation
+        // and durable storage, so money rules cannot drift between modes.
+        .route("/api/v1/app/agency", post(create_agency).get(get_agency))
+        .route("/api/v1/app/members", post(add_member))
+        .route(
+            "/api/v1/app/access/{agency_id}/{member_id}",
+            get(open_member_session),
+        )
+        .route("/api/v1/app/chains", get(list_chains).post(create_chain))
+        .route(
+            "/api/v1/app/chains/{chain_id}",
+            get(get_chain).patch(update_chain),
+        )
+        .route("/api/v1/app/chains/{chain_id}/costs", post(add_cost))
+        .route(
+            "/api/v1/app/chains/{chain_id}/scopes/{scope_id}",
+            patch(update_scope),
+        )
+        .route(
+            "/api/v1/app/chains/{chain_id}/milestones/{milestone_id}",
+            patch(update_milestone),
+        )
+}
+
+#[derive(Deserialize)]
+struct NewAgency {
+    name: String,
+}
+
+#[derive(Serialize)]
+struct AgencyView {
+    name: String,
+    role: &'static str,
+}
+
+async fn create_agency(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(input): Json<NewAgency>,
+) -> Result<Response, ApiError> {
+    let name = input.name.trim();
+    if name.chars().count() < 2 || name.chars().count() > 120 {
+        return Err(ApiError::new(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "invalid_agency",
+            "Check the agency name",
+            "Enter an agency name from 2 to 120 characters.",
+        )
+        .field("name"));
+    }
+    let (id, member_id) = state
+        .agency
+        .create_agency(name.to_owned())
+        .await
+        .map_err(store_error)?;
+    let secure = forwarded_https(&headers);
+    let mut response = (
+        StatusCode::CREATED,
+        Json(AgencyView {
+            name: name.to_owned(),
+            role: "owner",
+        }),
+    )
+        .into_response();
+    response.headers_mut().insert(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&format!(
+            "{AGENCY_COOKIE_NAME}={id}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax{}",
+            if secure { "; Secure" } else { "" }
+        ))
+        .expect("agency cookie is valid"),
+    );
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&format!(
+            "smc_agency_member={member_id}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax{}",
+            if secure { "; Secure" } else { "" }
+        ))
+        .expect("member cookie is valid"),
+    );
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(response)
+}
+
+async fn get_agency(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let id = agency_id(&headers)?;
+    let agency = state
+        .agency
+        .get(&id)
+        .await
+        .map_err(store_error)?
+        .filter(|workspace| workspace.permanent)
+        .ok_or_else(missing_agency)?;
+    let role = role_name(agency_member(&agency, &headers)?.role);
+    let mut response = Json(AgencyView {
+        name: agency.agency_name.unwrap_or_else(|| "Agency".into()),
+        role,
+    })
+    .into_response();
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(response)
+}
+
+#[derive(Deserialize)]
+struct NewMember {
+    name: String,
+    role: AgencyRole,
+}
+
+#[derive(Serialize)]
+struct MemberInvite {
+    id: String,
+    role: AgencyRole,
+    access_path: String,
+}
+
+async fn add_member(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(input): Json<NewMember>,
+) -> Result<Response, ApiError> {
+    let agency_id = agency_id(&headers)?;
+    require_agency_role(&state, &headers, &agency_id, &[AgencyRole::Owner]).await?;
+    let name = input.name.trim();
+    if name.chars().count() < 2 || name.chars().count() > 120 {
+        return Err(ApiError::new(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "invalid_member",
+            "Check the member name",
+            "Enter a member name from 2 to 120 characters.",
+        )
+        .field("name"));
+    }
+    let member = AgencyMember {
+        id: new_id(),
+        name: name.to_owned(),
+        role: input.role,
+    };
+    let result = state
+        .agency
+        .with_workspace(&agency_id, |agency| {
+            agency.members.push(member.clone());
+            Mutation::Changed(member.clone())
+        })
+        .await
+        .map_err(store_error)?
+        .ok_or_else(missing_agency)?;
+    let mut response = (
+        StatusCode::CREATED,
+        Json(MemberInvite {
+            id: result.id.clone(),
+            role: result.role,
+            access_path: format!("/api/v1/app/access/{agency_id}/{}", result.id),
+        }),
+    )
+        .into_response();
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(response)
+}
+
+async fn open_member_session(
+    State(state): State<AppState>,
+    Path((agency_id, member_id)): Path<(String, String)>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    let agency = state
+        .agency
+        .get(&agency_id)
+        .await
+        .map_err(store_error)?
+        .filter(|workspace| workspace.permanent)
+        .ok_or_else(missing_agency)?;
+    if !agency.members.iter().any(|member| member.id == member_id) {
+        return Err(missing_agency());
+    }
+    let secure = forwarded_https(&headers);
+    let mut response = StatusCode::NO_CONTENT.into_response();
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&format!(
+            "{AGENCY_COOKIE_NAME}={agency_id}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax{}",
+            if secure { "; Secure" } else { "" }
+        ))
+        .expect("agency cookie is valid"),
+    );
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        HeaderValue::from_str(&format!(
+            "smc_agency_member={member_id}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax{}",
+            if secure { "; Secure" } else { "" }
+        ))
+        .expect("member cookie is valid"),
+    );
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(response)
 }
 
 pub async fn global_rate_limit(
@@ -296,13 +504,29 @@ async fn list_chains(
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    let workspace = state
-        .demo
+    let workspace = store_for(&state, &headers)
         .get(&workspace_id)
         .await
         .map_err(store_error)?
         .ok_or_else(missing_workspace)?;
-    let mut chains: Vec<JobView> = workspace.chains.into_iter().map(JobView::from).collect();
+    let can_view_rates = if workspace.permanent {
+        matches!(
+            agency_member(&workspace, &headers)?.role,
+            AgencyRole::Owner | AgencyRole::Finance
+        )
+    } else {
+        true
+    };
+    let mut chains: Vec<JobView> = workspace
+        .chains
+        .into_iter()
+        .map(|mut chain| {
+            if !can_view_rates {
+                chain.costs.clear();
+            }
+            JobView::from(chain)
+        })
+        .collect();
     chains.sort_by_key(|chain| match chain.calculation.risk_state {
         crate::domain::RiskState::BelowFloor => 0,
         crate::domain::RiskState::NearFloor => 1,
@@ -320,17 +544,27 @@ async fn get_chain(
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
-    let workspace = state
-        .demo
+    let workspace = store_for(&state, &headers)
         .get(&workspace_id)
         .await
         .map_err(store_error)?
         .ok_or_else(missing_workspace)?;
-    let chain = workspace
+    let can_view_rates = if workspace.permanent {
+        matches!(
+            agency_member(&workspace, &headers)?.role,
+            AgencyRole::Owner | AgencyRole::Finance
+        )
+    } else {
+        true
+    };
+    let mut chain = workspace
         .chains
         .into_iter()
         .find(|chain| chain.id == chain_id)
         .ok_or_else(missing_chain)?;
+    if !can_view_rates {
+        chain.costs.clear();
+    }
     let mut response = Json(JobView::from(chain)).into_response();
     demo_no_store(&mut response);
     Ok(response)
@@ -342,6 +576,13 @@ async fn create_chain(
     Json(input): Json<NewChain>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
+    require_agency_role(
+        &state,
+        &headers,
+        &workspace_id,
+        &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
+    )
+    .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
     let key = idempotency_key(&headers)?;
     input.validate().map_err(|(field, detail)| {
@@ -354,8 +595,7 @@ async fn create_chain(
         .field(field)
     })?;
 
-    let result = state
-        .demo
+    let result = store_for(&state, &headers)
         .with_workspace(&workspace_id, |workspace| {
             if let Some(IdempotentResult::Chain(chain)) = workspace.idempotency.get(&key) {
                 return Mutation::Unchanged((StatusCode::OK, chain.clone()));
@@ -388,6 +628,13 @@ async fn update_chain(
     Json(input): Json<ChainPatch>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
+    require_agency_role(
+        &state,
+        &headers,
+        &workspace_id,
+        &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
+    )
+    .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
     if input.client_commitment_minor.is_none() && input.margin_floor_basis_points.is_none() {
         return Err(ApiError::new(
@@ -421,8 +668,7 @@ async fn update_chain(
         )
         .field("margin_floor_basis_points"));
     }
-    let result = state
-        .demo
+    let result = store_for(&state, &headers)
         .with_workspace(&workspace_id, |workspace| {
             let Some(chain) = workspace
                 .chains
@@ -465,6 +711,13 @@ async fn add_cost(
     Json(input): Json<NewCost>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
+    require_agency_role(
+        &state,
+        &headers,
+        &workspace_id,
+        &[AgencyRole::Owner, AgencyRole::Finance],
+    )
+    .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
     let key = idempotency_key(&headers)?;
     if input.subcontractor.trim().chars().count() < 2 || input.subcontractor.chars().count() > 120 {
@@ -494,8 +747,7 @@ async fn add_cost(
         )
         .field("amount_minor"));
     }
-    let result = state
-        .demo
+    let result = store_for(&state, &headers)
         .with_workspace(&workspace_id, |workspace| {
             if let Some(IdempotentResult::Chain(chain)) = workspace.idempotency.get(&key) {
                 return Mutation::Unchanged(Some((StatusCode::OK, chain.clone())));
@@ -544,6 +796,13 @@ async fn update_scope(
     Json(input): Json<ScopePatch>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
+    require_agency_role(
+        &state,
+        &headers,
+        &workspace_id,
+        &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
+    )
+    .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
     if input.status != ScopeStatus::Approved {
         return Err(ApiError::new(
@@ -553,8 +812,7 @@ async fn update_scope(
             "A pending demo revision can only be approved.",
         ));
     }
-    let result = state
-        .demo
+    let result = store_for(&state, &headers)
         .with_workspace(&workspace_id, |workspace| {
             let Some(chain) = workspace
                 .chains
@@ -591,9 +849,15 @@ async fn update_milestone(
     Json(input): Json<MilestonePatch>,
 ) -> Result<Response, ApiError> {
     let workspace_id = workspace_id(&headers)?;
+    require_agency_role(
+        &state,
+        &headers,
+        &workspace_id,
+        &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
+    )
+    .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
-    let result = state
-        .demo
+    let result = store_for(&state, &headers)
         .with_workspace(&workspace_id, |workspace| {
             let Some(chain) = workspace
                 .chains
@@ -639,9 +903,92 @@ fn workspace_id(headers: &HeaderMap) -> Result<String, ApiError> {
         .split(';')
         .filter_map(|item| item.trim().split_once('='))
         .find_map(|(name, value)| {
-            (name == COOKIE_NAME && !value.is_empty()).then(|| value.to_owned())
+            ((name == COOKIE_NAME || name == AGENCY_COOKIE_NAME) && !value.is_empty())
+                .then(|| value.to_owned())
         })
         .ok_or_else(missing_workspace)
+}
+
+fn agency_id(headers: &HeaderMap) -> Result<String, ApiError> {
+    let cookies = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    cookies
+        .split(';')
+        .filter_map(|item| item.trim().split_once('='))
+        .find_map(|(name, value)| {
+            (name == AGENCY_COOKIE_NAME && !value.is_empty()).then(|| value.to_owned())
+        })
+        .ok_or_else(missing_agency)
+}
+
+fn cookie(headers: &HeaderMap, wanted: &str) -> Option<String> {
+    headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default()
+        .split(';')
+        .filter_map(|item| item.trim().split_once('='))
+        .find_map(|(name, value)| (name == wanted && !value.is_empty()).then(|| value.to_owned()))
+}
+
+fn store_for<'a>(state: &'a AppState, headers: &HeaderMap) -> &'a crate::demo::DemoStore {
+    if cookie(headers, AGENCY_COOKIE_NAME).is_some() {
+        &state.agency
+    } else {
+        &state.demo
+    }
+}
+
+fn agency_member<'a>(
+    workspace: &'a crate::demo::Workspace,
+    headers: &HeaderMap,
+) -> Result<&'a crate::demo::AgencyMember, ApiError> {
+    let member_id = cookie(headers, "smc_agency_member").ok_or_else(missing_agency)?;
+    workspace
+        .members
+        .iter()
+        .find(|member| member.id == member_id)
+        .ok_or_else(missing_agency)
+}
+
+fn role_name(role: AgencyRole) -> &'static str {
+    match role {
+        AgencyRole::Owner => "owner",
+        AgencyRole::Finance => "finance",
+        AgencyRole::Producer => "producer",
+        AgencyRole::Viewer => "viewer",
+    }
+}
+
+async fn require_agency_role(
+    state: &AppState,
+    headers: &HeaderMap,
+    workspace_id: &str,
+    allowed: &[AgencyRole],
+) -> Result<(), ApiError> {
+    // Demo requests deliberately remain open inside their isolated workspace.
+    if cookie(headers, AGENCY_COOKIE_NAME).is_none() {
+        return Ok(());
+    }
+    let workspace = state
+        .agency
+        .get(workspace_id)
+        .await
+        .map_err(store_error)?
+        .ok_or_else(missing_agency)?;
+    let member = agency_member(&workspace, headers)?;
+    if allowed.contains(&member.role) {
+        Ok(())
+    } else {
+        Err(ApiError::new(
+            StatusCode::FORBIDDEN,
+            "financial_access_denied",
+            "Your role cannot make this change",
+            "Ask an owner or finance member to update this financial record.",
+        ))
+    }
 }
 
 fn idempotency_key(headers: &HeaderMap) -> Result<String, ApiError> {
@@ -727,6 +1074,15 @@ fn missing_workspace() -> ApiError {
         "demo_workspace_missing",
         "Demo expired",
         "This demo workspace is missing or expired. Start a new sample to continue.",
+    )
+}
+
+fn missing_agency() -> ApiError {
+    ApiError::new(
+        StatusCode::UNAUTHORIZED,
+        "agency_session_missing",
+        "Set up your agency",
+        "Create or return to an agency workspace to view real records.",
     )
 }
 
