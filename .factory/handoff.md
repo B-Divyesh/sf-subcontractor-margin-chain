@@ -1,4 +1,33 @@
-# QA handoff — FAIL
+# Review 1 handoff — FAIL
+
+- Work order: `subcontractor-margin-chain-review-1`
+- Reviewed: 2026-08-29 UTC
+- Repository candidate: `ab5ac4df62e5dc31f8fd8c831f27c287398a3392`
+- Live build: `406f2fc4d2b2c46f95e07b772c593b9438dd633c`
+
+The adversarial review is in `.factory/review-1.md`. No product code was changed.
+
+## Outcome
+
+**FAIL.** The first screen passes the cold 390 px and desktop clarity check, and the one-click demo is realistic, isolated, resettable, and same-origin. The release still has no real agency onboarding, durable tenant data, or role-based protection, so it cannot perform the brief's job outside an expiring fictional demo. The review records 33 findings in total, including a live CSP console error when either demo dialog opens, incomplete claim registration, copy defects, stale per-route Twitter metadata, and missing spreadsheet import/export.
+
+## Verification completed
+
+- Ran all 17 exact `.factory/claims.json` commands from a clean local clone. All passed; each of the eight Playwright claims passed in desktop and 390 px projects.
+- Ran `npm run check` in the clean clone: 9 Vitest tests, production build, formatting, Clippy, and 20 Rust tests passed. Initial JavaScript was 96.67 KiB gzip.
+- Ran the live quality suite: `PLAYWRIGHT_BASE_URL=https://subcontractor-margin-chain.sociobot.in PLAYWRIGHT_IP_OFFSET=8 npx playwright test tests/e2e/quality.spec.ts`; 32/32 passed.
+- Independently exercised the live landing → demo → mutation → reset flow. Requests stayed same-origin, local storage stayed empty, reset restored the fixture, the cookie changed, and the old workspace returned 401.
+- Rechecked earlier concurrency repairs live: provisions 1–5 returned 201 and 6 returned 429; global requests 1–40 were admitted and 41 returned 429; a 12-way idempotent retry returned one 201 plus eleven 200 responses and created one cost.
+- Crawled all rendered internal links and the Param Factory external link. Expected routes resolved; `/404` and unknown paths returned a designed HTTP 404.
+- Checked route titles, descriptions, canonical/OG metadata, one `h1`, one `main`, focus/back behavior, 200% zoom, mobile targets, and axe serious/critical results.
+
+## Work left
+
+Resolve every finding in `.factory/review-1.md`, beginning with F-1-1. Preserve the current demo as an isolated sandbox while adding the real tenant/role workflow. Keep the strict CSP and remove dialog inline-style injection rather than adding `unsafe-inline`. After claims and copy are repaired, rerun the whole review from fresh phone and desktop contexts; this report does not permit a diff-only recheck.
+
+---
+
+# Prior QA handoff — FAIL
 
 Independent verification of candidate `406f2fc4d2b2c46f95e07b772c593b9438dd633c` at https://subcontractor-margin-chain.sociobot.in completed on 2026-08-29 UTC.
 
