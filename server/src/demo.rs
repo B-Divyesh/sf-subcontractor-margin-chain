@@ -45,6 +45,15 @@ impl AppState {
             metrics: Metrics::default(),
         }
     }
+
+    pub fn with_stores(demo: DemoStore, agency: DemoStore) -> Self {
+        Self {
+            rate_limits: RateLimits::for_store(&demo),
+            demo,
+            agency,
+            metrics: Metrics::default(),
+        }
+    }
 }
 
 impl Default for AppState {
@@ -97,6 +106,28 @@ pub enum AgencyRole {
     Viewer,
 }
 
+impl AgencyRole {
+    pub fn can_view_client_identities(self) -> bool {
+        matches!(self, Self::Owner | Self::Finance)
+    }
+
+    pub fn can_view_subcontractor_rates(self) -> bool {
+        matches!(self, Self::Owner | Self::Finance)
+    }
+
+    pub fn can_manage_financials(self) -> bool {
+        matches!(self, Self::Owner | Self::Finance)
+    }
+
+    pub fn can_edit_operations(self) -> bool {
+        matches!(self, Self::Owner | Self::Finance | Self::Producer)
+    }
+
+    pub fn can_manage_team(self) -> bool {
+        matches!(self, Self::Owner)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum IdempotentResult {
     Chain(JobChain),
@@ -116,6 +147,23 @@ impl DemoStore {
     pub fn agency_production() -> Self {
         if let Some(path) = std::env::var_os("AGENCY_DATA_DIR").map(PathBuf::from) {
             return Self::filesystem(&path).unwrap_or_else(|error| { tracing::warn!(?path, %error, "configured agency directory unavailable; using isolated local storage"); Self::memory() });
+        }
+        if let (Ok(identity_endpoint), Ok(identity_header)) = (
+            std::env::var("IDENTITY_ENDPOINT"),
+            std::env::var("IDENTITY_HEADER"),
+        ) {
+            let endpoint = std::env::var("DEMO_BLOB_ENDPOINT")
+                .unwrap_or_else(|_| "https://sociobotblob.blob.core.windows.net".into());
+            return Self {
+                backend: Arc::new(StoreBackend::Azure(AzureBlobStore::new(
+                    endpoint,
+                    "subcontractor-margin-chain-agency".into(),
+                    identity_endpoint,
+                    identity_header,
+                    std::env::var("AZURE_CLIENT_ID")
+                        .unwrap_or_else(|_| "ba10d5bc-6375-4325-8892-4c7a5be500ca".into()),
+                ))),
+            };
         }
         let path = PathBuf::from("/data/agency-workspaces");
         Self::filesystem(&path).unwrap_or_else(|error| { tracing::warn!(?path, %error, "durable agency directory unavailable; using isolated local storage"); Self::memory() })

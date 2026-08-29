@@ -117,7 +117,7 @@ export function ChainPage() {
     try {
       finishAction(await updateMilestone(chainId, milestoneId, "sent"), `Marked ${label} as sent.`);
     } catch (problem) {
-      setActionError(problem instanceof Error ? problem.message : "The invoice state could not change. Try again.");
+      setActionError(problem instanceof Error ? problem.message : "The client invoice milestone status could not change. Try again.");
     } finally {
       setSaving("");
     }
@@ -140,7 +140,7 @@ export function ChainPage() {
     return (
       <main id="main" className="app-main section-shell">
         <h1 tabIndex={-1}>Loading the job chain…</h1>
-        <FeedbackPanel title="Loading the linked record" kind="loading"><p>Client commitment, cost, scope, and invoice milestones will appear here.</p></FeedbackPanel>
+        <FeedbackPanel title="Loading the linked record" kind="loading"><p>Client commitment, cost, scope, and client invoice milestones will appear here.</p></FeedbackPanel>
       </main>
     );
   }
@@ -149,7 +149,7 @@ export function ChainPage() {
     <main id="main" className="app-main section-shell">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to={base}>Job register</Link><span aria-hidden="true">/</span><span>{chain.name}</span></nav>
       <header className="page-heading chain-heading">
-        <p className="eyebrow">{chain.contracting_client}{chain.end_client ? ` → ${chain.end_client}` : ""}</p>
+        <p className="eyebrow">{chain.client_identity_hidden ? "Client identities hidden for this role" : `${chain.contracting_client ?? "Client"}${chain.end_client ? ` → ${chain.end_client}` : ""}`}</p>
         <h1 tabIndex={-1}>{chain.name}</h1>
         <p>{isReal ? "Saved agency record" : "Northline Studio · demo owner"}</p>
       </header>
@@ -162,7 +162,7 @@ export function ChainPage() {
             <div>
               <h2 id="commitment-heading">Client commitment</h2>
               <p className="large-money">{formatMoney(chain.client_commitment_minor)}</p>
-              <p>The current approved amount from {chain.contracting_client}.</p>
+              <p>{chain.client_identity_hidden ? "The client identity is hidden for this role." : `The current approved amount from ${chain.contracting_client}.`}</p>
             </div>
           </section>
 
@@ -174,7 +174,7 @@ export function ChainPage() {
                 {chain.scopes.map((scope) => (
                   <li key={scope.id}>
                     <div><strong>{scope.description}</strong><StatusStamp status={scope.status} /></div>
-                    {scope.status === "pending" && (
+                    {scope.status === "pending" && chain.permissions?.edit_operations !== false && (
                       <button className="secondary-action" type="button" onClick={() => approve(scope.id, scope.description)} disabled={saving === scope.id}>
                         {saving === scope.id ? "Approving…" : "Approve revision"}
                       </button>
@@ -189,15 +189,15 @@ export function ChainPage() {
             <span className="chain-register__number" aria-hidden="true">3</span>
             <div className="chain-register__content">
               <h2 id="cost-heading">Subcontractor commitments</h2>
-              <ul className="record-list">
+              {chain.subcontractor_rates_hidden ? <p>Subcontractor names, work, and costs are hidden for this role.</p> : <ul className="record-list">
                 {chain.costs.map((cost) => (
                   <li key={cost.id}>
                     <div><strong>{cost.subcontractor}</strong><span>{cost.role}</span></div>
                     <span className="money-figure">{formatMoney(cost.amount_minor)}</span>
                   </li>
                 ))}
-              </ul>
-              <form className="inline-sheet-form" onSubmit={submitCost} noValidate>
+              </ul>}
+              {!chain.subcontractor_rates_hidden && chain.permissions?.manage_financials !== false && <form className="inline-sheet-form" onSubmit={submitCost} noValidate>
                 <h3>Add a committed cost</h3>
                 <div className="field-grid">
                   <div className="field-control"><label htmlFor="cost-subcontractor">Subcontractor</label><input id="cost-subcontractor" name="subcontractor" autoComplete="off" required minLength={2} maxLength={120} aria-invalid={costErrors.subcontractor ? true : undefined} aria-describedby={costErrors.subcontractor ? "cost-subcontractor-error" : undefined} />{costErrors.subcontractor && <small id="cost-subcontractor-error" className="form-error">{costErrors.subcontractor}</small>}</div>
@@ -205,22 +205,22 @@ export function ChainPage() {
                   <div className="field-control"><label htmlFor="cost-amount">Amount in USD</label><span className="money-input"><span aria-hidden="true">$</span><input id="cost-amount" name="amount" inputMode="decimal" required aria-invalid={costErrors.amount ? true : undefined} aria-describedby={costErrors.amount ? "amount-help cost-amount-error" : "amount-help"} /></span><small id="amount-help">Use dollars and up to two decimal places.</small>{costErrors.amount && <small id="cost-amount-error" className="form-error">{costErrors.amount}</small>}</div>
                 </div>
                 <button className="primary-action" type="submit" disabled={saving === "cost"}>{saving === "cost" ? "Saving…" : "Add commitment"}</button>
-              </form>
+              </form>}
             </div>
           </section>
 
           <section className="chain-register" aria-labelledby="invoice-heading">
             <span className="chain-register__number" aria-hidden="true">4</span>
             <div className="chain-register__content">
-              <h2 id="invoice-heading">Client milestones</h2>
-              {chain.milestones.length === 0 ? <p>No client milestones yet. Add them when billing is agreed.</p> : (
+              <h2 id="invoice-heading">Client invoice milestones</h2>
+              {chain.milestones.length === 0 ? <p>No client invoice milestones yet. Add them when billing is agreed.</p> : (
                 <ul className="record-list">
                   {chain.milestones.map((milestone) => (
                     <li key={milestone.id}>
                       <div><strong>{milestone.label}</strong><span>{formatMoney(milestone.amount_minor)}</span><StatusStamp status={milestone.status} /></div>
-                      {(milestone.status === "planned" || milestone.status === "due") && (
+                      {(milestone.status === "planned" || milestone.status === "due") && chain.permissions?.edit_operations !== false && (
                         <button className="secondary-action" type="button" onClick={() => markSent(milestone.id, milestone.label)} disabled={saving === milestone.id}>
-                          {saving === milestone.id ? "Saving…" : "Mark invoice sent"}
+                          {saving === milestone.id ? "Saving…" : "Mark milestone sent"}
                         </button>
                       )}
                     </li>

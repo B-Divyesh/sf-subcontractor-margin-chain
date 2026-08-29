@@ -53,6 +53,7 @@ pub fn app_with_state(static_dir: PathBuf, state: AppState) -> Router {
         )
         .route("/start", spa_route(index.clone(), StatusCode::OK))
         .route("/app/chains", spa_route(index.clone(), StatusCode::OK))
+        .route("/app/import", spa_route(index.clone(), StatusCode::OK))
         .route("/app/chains/new", spa_route(index.clone(), StatusCode::OK))
         .route(
             "/app/chains/{chain_id}",

@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   await page.setExtraHTTPHeaders({ "X-Forwarded-For": `203.0.${projectOctet}.${testOctet}` });
 });
 
-for (const path of ["/", "/demo", "/demo/import", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/privacy", "/terms", "/404"]) {
+for (const path of ["/", "/demo", "/demo/import", "/demo/chains/new", "/demo/chains/autumn-launch-films", "/start", "/privacy", "/terms", "/404"]) {
   test(`route ${path} has semantics, a unique title, and no serious axe findings`, async ({ page }) => {
     await page.goto(path);
     await expect(page.locator("main")).toHaveCount(1);
@@ -51,6 +51,18 @@ test("the visible wordmark is contained in its accessible name", async ({ page }
   await expect(page.getByRole("link", { name: "MC Margin Chain" })).toBeVisible();
 });
 
+test("the first screen states the job, audience, sample action, and three facts", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Protect margin before work starts." })).toBeVisible();
+  await expect(page.getByText("For boutique agencies that hire subcontractors")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Try it with sample data" })).toBeVisible();
+  const facts = page.getByRole("list", { name: "Product facts" });
+  await expect(facts.getByRole("listitem")).toHaveCount(3);
+  const box = await facts.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+});
+
 test("deep links, back navigation, and route focus work", async ({ page }) => {
   await page.goto("/demo/chains/autumn-launch-films");
   await expect(page.getByRole("heading", { name: "Autumn launch films" })).toBeFocused();
@@ -86,9 +98,77 @@ test("public and demo routes and both dialogs run without console or page errors
   expect(errors).toEqual([]);
 });
 
+test("a fresh saved-workspace deep link opens setup without console errors", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/app/chains");
+  await expect(page).toHaveURL(/\/start$/);
+  await expect(page.getByRole("heading", { name: "Create your agency workspace." })).toBeFocused();
+  expect(errors).toEqual([]);
+});
+
+test("every sitemap URL returns a successful page and includes setup", async ({ request }) => {
+  const sitemap = await request.get("/sitemap.xml");
+  expect(sitemap.status()).toBe(200);
+  const xml = await sitemap.text();
+  const paths = [...xml.matchAll(/<loc>https:\/\/subcontractor-margin-chain\.sociobot\.in([^<]*)<\/loc>/g)].map((match) => match[1] || "/");
+  expect(paths).toContain("/start");
+  expect(paths).not.toContain("/404");
+  for (const path of paths) {
+    const response = await request.get(path);
+    expect(response.status(), path).toBe(200);
+  }
+});
+
+test("a producer sees a deliberate role-limited workspace without protected values", async ({ page }) => {
+  await page.goto("/start");
+  await page.getByLabel("Agency name").fill("Role View Agency");
+  await page.getByRole("button", { name: "Create agency workspace" }).click();
+  await expect(page).toHaveURL(/\/app\/chains$/);
+  await expect(page.getByRole("heading", { name: "Job margin register" })).toBeVisible();
+  const createdStatus = await page.evaluate(async () => {
+    const response = await fetch("/api/v1/app/chains", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": "role-browser-chain" },
+      body: JSON.stringify({
+        name: "Protected launch",
+        contracting_client: "Hidden Client Name",
+        end_client: "Hidden End Client",
+        approved_scope: "Campaign delivery",
+        client_commitment_minor: 1_500_000,
+        margin_floor_basis_points: 2500,
+        subcontractor: "Hidden Partner Name",
+        cost_role: "Production",
+        cost_minor: 600_000,
+      }),
+    });
+    return response.status;
+  });
+  expect(createdStatus).toBe(201);
+  await page.goto("/settings/team");
+  await page.getByLabel("Team member name").fill("Production lead");
+  await page.getByLabel("Role").selectOption("producer");
+  await page.getByRole("button", { name: "Create private access link" }).click();
+  const accessUrl = await page.locator("code").textContent();
+  await page.goto(accessUrl!);
+  await expect(page).toHaveURL(/\/app\/chains$/);
+  await expect(page.getByText("Client identities hidden for this role")).toBeVisible();
+  await expect(page.getByText("Subcontractor costs and margin are hidden for this role.")).toBeVisible();
+  await expect(page.getByText("Hidden Client Name")).toHaveCount(0);
+  await expect(page.getByText("Hidden End Client")).toHaveCount(0);
+  await expect(page.getByText("Hidden Partner Name")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Add a job chain" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Import CSV" })).toHaveCount(0);
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((violation) => ["serious", "critical"].includes(violation.impact ?? ""))).toEqual([]);
+});
+
 test("each route updates title, description, canonical, Open Graph, and Twitter metadata", async ({ page }) => {
   const cases = [
     ["/demo", "Demo — Subcontractor Margin Chain", "Try the margin chain with isolated sample agency data."],
+    ["/start", "Set up your agency — Subcontractor Margin Chain", "Create a saved agency workspace for real job chains."],
     ["/privacy", "Privacy — Subcontractor Margin Chain", "How the public site and isolated demo handle data."],
     ["/terms", "Terms — Subcontractor Margin Chain", "Terms for using the public site and sample demo."],
     ["/404", "Page not found — Subcontractor Margin Chain", "Return to Subcontractor Margin Chain or open the sample demo."],

@@ -1,6 +1,6 @@
 # Subcontractor Margin Chain
 
-Subcontractor Margin Chain shows boutique agencies each client commitment, subcontractor cost, approval, invoice milestone, and expected margin in one job chain.
+Subcontractor Margin Chain shows boutique agencies each client commitment, subcontractor cost, approval, client invoice milestone, and expected margin in one job chain.
 
 Open the [live demo](https://subcontractor-margin-chain.sociobot.in/?demo=1) without an account. Its isolated workspace expires within 24 hours.
 
@@ -9,23 +9,27 @@ Open the [live demo](https://subcontractor-margin-chain.sociobot.in/?demo=1) wit
 - Shows the client commitment, committed cost, expected margin, and exact floor calculation.
 - Names the cost that puts expected margin below the floor.
 - Keeps scope approval and client invoice milestones beside the same job.
-- Creates a job chain, adds a cost, approves scope, updates an invoice state, and resets the sample.
+- Creates a job chain, adds a cost, approves scope, updates a client invoice milestone status, and resets the sample.
 - Maps CSV columns and previews every row before importing valid job chains.
 - Exports all current demo job chains as local CSV or JSON downloads.
 
 The demo starts with three original fictional Northline Studio jobs. Their provenance is recorded in [`.factory/demo-fixtures.json`](.factory/demo-fixtures.json).
 
-Planned Studio pricing is $79 per agency each month for 25 active job chains. Portfolio is planned at $159 for 100 active job chains.
-
 ## Real agency workspace
 
 Open `/start` to create a saved agency workspace. Real job chains use a separate session and never load the demo fixtures.
+
+- Imports existing job chains from CSV after a column-mapping dry run.
+- Exports the current saved register as CSV or JSON.
+- Hides client identities, subcontractor details, costs, and derived margin totals from producer and viewer roles.
+
+The saved workspace is a free beta. This release has no checkout or paid plan.
 
 ## Stack
 
 - React 19, React Router, strict TypeScript, and Vite
 - Rust 2021, axum, and tokio
-- Shared demo records and request limits across application replicas
+- Shared demo and saved agency records across application replicas
 - Locked filesystem storage for local containers
 
 The server starts with only `PORT`, which defaults to 8080. Readiness and Prometheus metrics are available at `/ready` and `/internal/metrics`.
@@ -80,7 +84,7 @@ curl http://127.0.0.1:8080/health
 
 The public and demo flow makes no cross-origin requests. It has no analytics, remote fonts, third-party scripts, or advertising.
 
-CSV files stay in the browser until valid rows are sent to the isolated demo API. CSV and JSON exports are generated in the browser.
+CSV files stay in the browser until valid rows are sent to the selected workspace. CSV and JSON exports are generated in the browser.
 
 Choose “Reset demo” to destroy the current workspace. See [Privacy](https://subcontractor-margin-chain.sociobot.in/privacy) and [Terms](https://subcontractor-margin-chain.sociobot.in/terms).
 

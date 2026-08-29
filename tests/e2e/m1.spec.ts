@@ -30,11 +30,11 @@ test("@claim:m1-margin-risk names the cost that crosses the floor", async ({ pag
   await expect(page.getByLabel("Margin check")).toContainText("$3,500");
 });
 
-test("@claim:m1-linked-status keeps approval and invoice state after reload", async ({ page }) => {
+test("@claim:m1-linked-status keeps approval and client invoice milestone status after reload", async ({ page }) => {
   await page.goto("/demo/chains/autumn-launch-films");
   await page.getByRole("button", { name: "Approve revision" }).click();
   await expect(page.getByText("Approved Social cut-down revision.")).toBeVisible();
-  await page.getByRole("button", { name: "Mark invoice sent" }).click();
+  await page.getByRole("button", { name: "Mark milestone sent" }).click();
   await expect(page.getByText("Marked Final delivery as sent.")).toBeVisible();
   await page.reload();
   const scopeRow = page.getByRole("listitem").filter({ hasText: "Social cut-down revision" });
@@ -50,6 +50,9 @@ test("@claim:m1-demo-no-account opens a usable sample without CIAM", async ({ pa
   await expect(page).toHaveURL(/\/demo$/);
   await expect(page.getByRole("heading", { name: "Job margin register" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Annual report microsite" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Demo — sample data, nothing is saved" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reset demo" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Start for real" })).toBeVisible();
   expect(requests.some((url) => /ciamlogin|login\.microsoftonline|billing|checkout/.test(url))).toBe(false);
   expect(requests.filter((url) => url.includes("/api/")).every((url) => url.includes("/api/v1/demo/"))).toBe(true);
 });
@@ -116,7 +119,7 @@ test("@claim:m1-sample-workflow completes every documented sample action", async
   await page.getByLabel("Amount in USD").fill("1");
   await page.getByRole("button", { name: "Add commitment" }).click();
   await page.getByRole("button", { name: "Approve revision" }).click();
-  await page.getByRole("button", { name: "Mark invoice sent" }).click();
+  await page.getByRole("button", { name: "Mark milestone sent" }).click();
   await page.getByRole("button", { name: "Reset demo" }).click();
   await page.getByRole("dialog", { name: "Reset the sample?" }).getByRole("button", { name: "Reset demo" }).click();
   await expect(page.getByRole("list", { name: "Sample job chains" }).getByRole("listitem")).toHaveCount(3);
@@ -130,7 +133,7 @@ test("@claim:m1-product-boundaries exposes no tax, worker classification, paymen
   const body = await response.json();
   const keys = JSON.stringify(body);
   expect(keys).not.toMatch(/payroll_tax|worker_(status|classification)|payment_collection|send_invoice/i);
-  await expect(page.getByRole("button", { name: "Mark invoice sent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mark milestone sent" })).toBeVisible();
 });
 
 test("@claim:m1-csv-import maps and dry-runs the bundled CSV before importing two jobs", async ({ page }) => {
@@ -227,4 +230,64 @@ test("@claim:real-workspace-onboarding creates a saved agency workspace", async 
   await expect(page).toHaveURL(/\/app\/chains$/);
   await expect(page.getByRole("heading", { name: "Job margin register" })).toBeVisible();
   await expect(page.getByText("No job chains yet")).toBeVisible();
+});
+
+test("@claim:real-csv-import previews and imports CSV rows into a saved agency", async ({ page }) => {
+  await page.goto("/start");
+  await page.getByLabel("Agency name").fill("Cedar Row Studio");
+  await page.getByRole("button", { name: "Create agency workspace" }).click();
+  await page.getByRole("link", { name: "Import CSV" }).click();
+  await expect(page).toHaveURL(/\/app\/import$/);
+  await page.getByRole("button", { name: "Load bundled sample CSV" }).click();
+  await page.getByRole("button", { name: "Check import" }).click();
+  await expect(page.getByText("2 valid jobs. 0 problems.")).toBeVisible();
+  await page.getByRole("button", { name: "Import 2 jobs" }).click();
+  await expect(page).toHaveURL(/\/app\/chains$/);
+  const register = page.getByRole("list", { name: "Saved agency job chains" });
+  await expect(register.getByRole("link", { name: "Museum audio guide" })).toBeVisible();
+  await expect(register.getByRole("link", { name: "Spring catalogue" })).toBeVisible();
+  await page.reload();
+  await expect(register.getByRole("listitem")).toHaveCount(2);
+});
+
+test("@claim:real-data-export downloads saved agency chains without an export request", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await page.goto("/start");
+  await page.getByLabel("Agency name").fill("Export Proof Studio");
+  await page.getByRole("button", { name: "Create agency workspace" }).click();
+  await page.locator(".page-heading").getByRole("link", { name: "Add a job chain" }).click();
+  await page.getByLabel("Job name").fill("Exported launch");
+  await page.getByLabel("Contracting client").fill("Juniper Retail");
+  await page.getByLabel("Approved work").fill("Launch campaign");
+  await page.getByLabel("Client commitment in USD").fill("12000");
+  await page.getByRole("textbox", { name: "Subcontractor", exact: true }).fill("Avery Cole");
+  await page.getByLabel("Work covered").fill("Production");
+  await page.getByLabel("Committed cost in USD").fill("5000");
+  await page.getByRole("button", { name: "Create job chain" }).click();
+  await expect(page.getByRole("heading", { name: "Exported launch" })).toBeVisible();
+  await page.getByLabel("Breadcrumb").getByRole("link", { name: "Job register" }).click();
+  await expect(page.getByRole("button", { name: "Export CSV" })).toBeVisible();
+  const beforeExports = requests.length;
+  const csvDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV" }).click();
+  const csv = await (await csvDownload).createReadStream();
+  expect(await streamText(csv)).toContain("Exported launch,Juniper Retail");
+  const jsonDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export JSON" }).click();
+  const json = await (await jsonDownload).createReadStream();
+  expect(JSON.parse(await streamText(json)).chains[0].name).toBe("Exported launch");
+  expect(requests).toHaveLength(beforeExports);
+});
+
+test("@claim:real-beta-no-billing states the free beta without checkout traffic", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await page.goto("/");
+  await expect(page.getByText("The saved workspace is a free beta.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Create a saved workspace." })).toBeVisible();
+  await expect(page.getByText("This beta has no checkout or paid plan.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Pricing" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /buy|checkout|subscribe/i })).toHaveCount(0);
+  expect(requests.some((url) => /api\.sociobot\.in|checkout|billing/i.test(url))).toBe(false);
 });

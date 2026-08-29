@@ -14,12 +14,13 @@ export function PrivacyPage() {
       <section>
         <h2>What an agency workspace stores</h2>
         <p>Your saved job chains stay in the agency workspace. The owner session can add finance, producer, or viewer access.</p>
-        <p>Producer and viewer sessions do not receive subcontractor commitment amounts. Do not enter real client or subcontractor details in the demo.</p>
+        <p>Producer and viewer sessions do not receive client identities, subcontractor details, costs, or derived margin totals.</p>
+        <p>Do not enter real client or subcontractor details in the demo.</p>
       </section>
       <section>
         <h2>What we do not collect</h2>
         <p>This release has no analytics, advertising pixels, or payment form.</p>
-        <p>CSV files are read in your browser. Valid rows go only to your isolated demo workspace when you choose to import them.</p>
+        <p>CSV files are read in your browser. Valid rows go only to the workspace where you choose to import them.</p>
       </section>
       <section>
         <h2>How to remove demo data</h2>
@@ -50,7 +51,7 @@ export function TermsPage() {
       </section>
       <section>
         <h2>Acceptable use</h2>
-        <p>Do not attack the service, evade limits, or enter confidential data. Access may be limited to protect other visitors.</p>
+        <p>Do not attack the service, evade limits, or enter confidential data in the demo. Access may be limited to protect other visitors.</p>
       </section>
       <p>Questions about these terms can go to <a href="mailto:support@sociobot.in">support@sociobot.in</a>.</p>
     </main>

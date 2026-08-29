@@ -8,11 +8,25 @@ export type PlannedRoute = {
 
 export const plannedRoutes: readonly PlannedRoute[] = [
   {
+    path: "/start",
+    title: "Set up your agency — Subcontractor Margin Chain",
+    purpose: "Create a saved agency workspace",
+    milestone: "M2",
+    access: "public",
+  },
+  {
     path: "/",
     title: "Subcontractor Margin Chain — protect job margin",
     purpose: "Landing page and live product preview",
     milestone: "M1",
     access: "public",
+  },
+  {
+    path: "/app/import",
+    title: "Import saved jobs — Subcontractor Margin Chain",
+    purpose: "Map, dry-run, and import spreadsheet rows into the agency workspace",
+    milestone: "M2",
+    access: "signed-in",
   },
   {
     path: "/demo",

@@ -10,15 +10,16 @@ Audited: 2026-08-29 from `src/routes/LandingPage.tsx` and the shared footer. Cur
 | Primary action | Try it with sample data | 5 | Pass |
 | Secondary action | See how the chain works | 5 | Pass |
 | Action note | See a filled job chain. | 5 | Pass |
-| Action note | Add a cost, approve scope, or mark an invoice sent. | 10 | Pass |
+| Action note | Add a cost, approve scope, or mark a client invoice milestone sent. | 12 | Pass |
 | Action note | Reset when finished. | 3 | Pass |
 | Fact | No account for the demo. | 5 | Pass |
 | Fact | Demo changes are discarded. | 4 | Pass |
-| Fact | Start a saved agency workspace. | 5 | Pass |
+| Fact | The saved workspace is a free beta. | 7 | Pass |
 | Preview label | Job margin preview | 3 | Pass |
-| Preview heading | See commitment, cost, and invoice status together. | 7 | Pass |
+| Preview heading | See commitment, cost, and client invoice milestone status together. | 9 | Pass |
 | Preview status | Pending scope may change margin | 5 | Pass |
 | Preview explanation | A pending social cut-down remains visible before you approve more work. | 11 | Pass |
+| Preview action | Open this sample job | 4 | Pass |
 | Section heading | Track each job's margin in three steps. | 7 | Pass |
 | Step heading | Record the client commitment. | 4 | Pass |
 | Step copy | Add the approved scope, client commitment, and margin floor. | 9 | Pass |
@@ -32,15 +33,20 @@ Audited: 2026-08-29 from `src/routes/LandingPage.tsx` and the shared footer. Cur
 | Demo guidance | The sample uses fictional names and values. | 7 | Pass |
 | Demo guidance | Enter real data only in your agency workspace. | 8 | Pass |
 | Limit | We do not calculate payroll tax or decide worker status. | 10 | Pass |
-| Workspace label | Agency workspace | 2 | Pass |
-| Workspace heading | Save real job chains for your agency. | 7 | Pass |
-| Workspace note | Create a workspace, then add real job chains separately from the sample. | 11 | Pass |
-| Workspace action | Create your agency workspace | 5 | Pass |
+| Workspace label | Saved workspace beta | 3 | Pass |
+| Workspace heading | Create a saved workspace. | 4 | Pass |
+| Workspace copy | Create real job chains separately from the sample. | 8 | Pass |
+| Workspace copy | This beta has no checkout or paid plan. | 8 | Pass |
+| Workspace option | Save real job chains | 4 | Pass |
+| Workspace state | Free beta | 2 | Pass |
+| Workspace action | Create your agency workspace | 4 | Pass |
+| Demo option | Keep the sample separate | 4 | Pass |
+| Demo option copy | Use the demo to test the workflow. | 7 | Pass |
 | Footer | Keep each client commitment, subcontractor cost, and margin in one job chain. | 12 | Pass |
 
 No sentence exceeds 22 words. No rendered sentence contains a banned marketing word.
 
-The first screen states the job, names boutique agencies, and offers the sample action in one breath.
+The first screen states the job, names boutique agencies, explains the sample action, and gives three plain facts.
 
 ## Terminology table
 
@@ -56,5 +62,7 @@ The first screen states the job, names boutique agencies, and offers the sample 
 | Minimum acceptable margin | margin floor |
 | Person or company delivering work | subcontractor |
 | Client-agreed work | approved scope |
-| Scheduled billing state | client invoice milestone |
+| Scheduled client billing record | client invoice milestone |
+| State of a scheduled client billing record | client invoice milestone status |
 | No-account sample environment | demo |
+| Persistent real-data environment | saved workspace |

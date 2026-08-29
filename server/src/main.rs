@@ -43,7 +43,7 @@ async fn main() {
         ?static_dir,
         demo_store = state.demo.backend_name(), agency_store = state.agency.backend_name(),
         build_sha = routes_build_sha(),
-        "server started; runtime config supplied: PORT/STATIC_DIR or defaults; demo persistence selected automatically; generated secrets: none in M1"
+        "server started; runtime config supplied: PORT/STATIC_DIR or defaults; shared persistence selected automatically; generated secrets: none"
     );
 
     axum::serve(listener, app_with_state(static_dir, state))

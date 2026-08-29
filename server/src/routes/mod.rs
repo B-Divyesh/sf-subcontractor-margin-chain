@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use axum::{
-    extract::{Path, Request, State},
+    extract::{OriginalUri, Path, Request, State},
     http::{header, HeaderMap, HeaderName, HeaderValue, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
@@ -17,6 +17,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
@@ -45,7 +46,38 @@ impl From<JobChain> for JobView {
 
 #[derive(Serialize)]
 struct ChainList {
-    chains: Vec<JobView>,
+    chains: Vec<Value>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+struct AgencyPermissions {
+    view_client_identities: bool,
+    view_subcontractor_rates: bool,
+    manage_financials: bool,
+    edit_operations: bool,
+    manage_team: bool,
+}
+
+impl AgencyPermissions {
+    fn demo() -> Self {
+        Self {
+            view_client_identities: true,
+            view_subcontractor_rates: true,
+            manage_financials: true,
+            edit_operations: true,
+            manage_team: true,
+        }
+    }
+
+    fn for_role(role: AgencyRole) -> Self {
+        Self {
+            view_client_identities: role.can_view_client_identities(),
+            view_subcontractor_rates: role.can_view_subcontractor_rates(),
+            manage_financials: role.can_manage_financials(),
+            edit_operations: role.can_edit_operations(),
+            manage_team: role.can_manage_team(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -97,7 +129,7 @@ impl ApiError {
             status: StatusCode::TOO_MANY_REQUESTS,
             code: "rate_limited",
             title: "Too many requests",
-            detail: "Too many requests reached the demo. Wait, then try again.".into(),
+            detail: "Too many requests reached the service. Wait, then try again.".into(),
             field: None,
             retry_after: Some(retry_after),
         }
@@ -171,6 +203,7 @@ pub fn api_router() -> Router<AppState> {
         // The app routes intentionally use a different cookie and are never
         // provisioned from demo fixtures. The handlers share domain validation
         // and durable storage, so money rules cannot drift between modes.
+        .route("/api/v1/app/session", get(get_agency_session))
         .route("/api/v1/app/agency", post(create_agency).get(get_agency))
         .route("/api/v1/app/members", post(add_member))
         .route(
@@ -202,6 +235,46 @@ struct NewAgency {
 struct AgencyView {
     name: String,
     role: &'static str,
+}
+
+#[derive(Serialize)]
+struct AgencySessionView {
+    active: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    role: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    permissions: Option<AgencyPermissions>,
+}
+
+async fn get_agency_session(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let session = async {
+        let agency_id = cookie(&headers, AGENCY_COOKIE_NAME)?;
+        let workspace = state.agency.get(&agency_id).await.ok().flatten()?;
+        if !workspace.permanent {
+            return None;
+        }
+        let role = agency_member(&workspace, &headers).ok()?.role;
+        Some(AgencySessionView {
+            active: true,
+            name: workspace.agency_name,
+            role: Some(role_name(role)),
+            permissions: Some(AgencyPermissions::for_role(role)),
+        })
+    }
+    .await
+    .unwrap_or(AgencySessionView {
+        active: false,
+        name: None,
+        role: None,
+        permissions: None,
+    });
+    let mut response = Json(session).into_response();
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    response
 }
 
 async fn create_agency(
@@ -298,7 +371,7 @@ async fn add_member(
     Json(input): Json<NewMember>,
 ) -> Result<Response, ApiError> {
     let agency_id = agency_id(&headers)?;
-    require_agency_role(&state, &headers, &agency_id, &[AgencyRole::Owner]).await?;
+    require_agency_role(&state, &headers, &agency_id, true, &[AgencyRole::Owner]).await?;
     let name = input.name.trim();
     if name.chars().count() < 2 || name.chars().count() > 120 {
         return Err(ApiError::new(
@@ -401,16 +474,17 @@ async fn health() -> Json<HealthResponse> {
 }
 
 async fn ready(State(state): State<AppState>) -> Response {
-    if state.demo.ready().await {
+    let (demo_ready, agency_ready) = tokio::join!(state.demo.ready(), state.agency.ready());
+    if demo_ready && agency_ready {
         (
             StatusCode::OK,
-            Json(serde_json::json!({"status":"ready","demo_store":state.demo.backend_name()})),
+            Json(serde_json::json!({"status":"ready","demo_store":state.demo.backend_name(),"agency_store":state.agency.backend_name()})),
         )
             .into_response()
     } else {
         (
             StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({"status":"not_ready","demo_store":state.demo.backend_name()})),
+            Json(serde_json::json!({"status":"not_ready","demo_store":state.demo.backend_name(),"agency_store":state.agency.backend_name()})),
         )
             .into_response()
     }
@@ -501,38 +575,28 @@ async fn delete_workspace(
 
 async fn list_chains(
     State(state): State<AppState>,
+    OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
-    let workspace_id = workspace_id(&headers)?;
-    let workspace = store_for(&state, &headers)
+    let app_request = is_app_request(&uri);
+    let workspace_id = workspace_id_for(&headers, app_request)?;
+    let workspace = store_for(&state, app_request)
         .get(&workspace_id)
         .await
         .map_err(store_error)?
-        .ok_or_else(missing_workspace)?;
-    let can_view_rates = if workspace.permanent {
-        matches!(
-            agency_member(&workspace, &headers)?.role,
-            AgencyRole::Owner | AgencyRole::Finance
-        )
-    } else {
-        true
-    };
-    let mut chains: Vec<JobView> = workspace
-        .chains
-        .into_iter()
-        .map(|mut chain| {
-            if !can_view_rates {
-                chain.costs.clear();
-            }
-            JobView::from(chain)
-        })
-        .collect();
-    chains.sort_by_key(|chain| match chain.calculation.risk_state {
+        .ok_or_else(|| missing_workspace_for(app_request))?;
+    let permissions = permissions_for(&workspace, &headers)?;
+    let mut chains = workspace.chains;
+    chains.sort_by_key(|chain| match chain.calculation().risk_state {
         crate::domain::RiskState::BelowFloor => 0,
         crate::domain::RiskState::NearFloor => 1,
         crate::domain::RiskState::Incomplete => 2,
         crate::domain::RiskState::Safe => 3,
     });
+    let chains = chains
+        .into_iter()
+        .map(|chain| project_job(chain, permissions))
+        .collect();
     let mut response = Json(ChainList { chains }).into_response();
     demo_no_store(&mut response);
     Ok(response)
@@ -541,46 +605,41 @@ async fn list_chains(
 async fn get_chain(
     State(state): State<AppState>,
     Path(chain_id): Path<String>,
+    OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
-    let workspace_id = workspace_id(&headers)?;
-    let workspace = store_for(&state, &headers)
+    let app_request = is_app_request(&uri);
+    let workspace_id = workspace_id_for(&headers, app_request)?;
+    let workspace = store_for(&state, app_request)
         .get(&workspace_id)
         .await
         .map_err(store_error)?
-        .ok_or_else(missing_workspace)?;
-    let can_view_rates = if workspace.permanent {
-        matches!(
-            agency_member(&workspace, &headers)?.role,
-            AgencyRole::Owner | AgencyRole::Finance
-        )
-    } else {
-        true
-    };
-    let mut chain = workspace
+        .ok_or_else(|| missing_workspace_for(app_request))?;
+    let permissions = permissions_for(&workspace, &headers)?;
+    let chain = workspace
         .chains
         .into_iter()
         .find(|chain| chain.id == chain_id)
-        .ok_or_else(missing_chain)?;
-    if !can_view_rates {
-        chain.costs.clear();
-    }
-    let mut response = Json(JobView::from(chain)).into_response();
+        .ok_or_else(|| missing_chain_for(app_request))?;
+    let mut response = Json(project_job(chain, permissions)).into_response();
     demo_no_store(&mut response);
     Ok(response)
 }
 
 async fn create_chain(
     State(state): State<AppState>,
+    OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
     Json(input): Json<NewChain>,
 ) -> Result<Response, ApiError> {
-    let workspace_id = workspace_id(&headers)?;
+    let app_request = is_app_request(&uri);
+    let workspace_id = workspace_id_for(&headers, app_request)?;
     require_agency_role(
         &state,
         &headers,
         &workspace_id,
-        &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
+        app_request,
+        &[AgencyRole::Owner, AgencyRole::Finance],
     )
     .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
@@ -595,7 +654,7 @@ async fn create_chain(
         .field(field)
     })?;
 
-    let result = store_for(&state, &headers)
+    let result = store_for(&state, app_request)
         .with_workspace(&workspace_id, |workspace| {
             if let Some(IdempotentResult::Chain(chain)) = workspace.idempotency.get(&key) {
                 return Mutation::Unchanged((StatusCode::OK, chain.clone()));
@@ -609,8 +668,10 @@ async fn create_chain(
         })
         .await
         .map_err(store_error)?
-        .ok_or_else(missing_workspace)?;
-    let mut response = (result.0, Json(JobView::from(result.1))).into_response();
+        .ok_or_else(|| missing_workspace_for(app_request))?;
+    let permissions =
+        permissions_for_workspace_id(&state, &headers, &workspace_id, app_request).await?;
+    let mut response = (result.0, Json(project_job(result.1, permissions))).into_response();
     demo_no_store(&mut response);
     Ok(response)
 }
@@ -624,15 +685,18 @@ struct ChainPatch {
 async fn update_chain(
     State(state): State<AppState>,
     Path(chain_id): Path<String>,
+    OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
     Json(input): Json<ChainPatch>,
 ) -> Result<Response, ApiError> {
-    let workspace_id = workspace_id(&headers)?;
+    let app_request = is_app_request(&uri);
+    let workspace_id = workspace_id_for(&headers, app_request)?;
     require_agency_role(
         &state,
         &headers,
         &workspace_id,
-        &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
+        app_request,
+        &[AgencyRole::Owner, AgencyRole::Finance],
     )
     .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
@@ -668,7 +732,7 @@ async fn update_chain(
         )
         .field("margin_floor_basis_points"));
     }
-    let result = store_for(&state, &headers)
+    let result = store_for(&state, app_request)
         .with_workspace(&workspace_id, |workspace| {
             let Some(chain) = workspace
                 .chains
@@ -690,9 +754,11 @@ async fn update_chain(
         })
         .await
         .map_err(store_error)?
-        .ok_or_else(missing_workspace)?
-        .ok_or_else(missing_chain)?;
-    let mut response = Json(JobView::from(result)).into_response();
+        .ok_or_else(|| missing_workspace_for(app_request))?
+        .ok_or_else(|| missing_chain_for(app_request))?;
+    let permissions =
+        permissions_for_workspace_id(&state, &headers, &workspace_id, app_request).await?;
+    let mut response = Json(project_job(result, permissions)).into_response();
     demo_no_store(&mut response);
     Ok(response)
 }
@@ -707,14 +773,17 @@ struct NewCost {
 async fn add_cost(
     State(state): State<AppState>,
     Path(chain_id): Path<String>,
+    OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
     Json(input): Json<NewCost>,
 ) -> Result<Response, ApiError> {
-    let workspace_id = workspace_id(&headers)?;
+    let app_request = is_app_request(&uri);
+    let workspace_id = workspace_id_for(&headers, app_request)?;
     require_agency_role(
         &state,
         &headers,
         &workspace_id,
+        app_request,
         &[AgencyRole::Owner, AgencyRole::Finance],
     )
     .await?;
@@ -747,7 +816,7 @@ async fn add_cost(
         )
         .field("amount_minor"));
     }
-    let result = store_for(&state, &headers)
+    let result = store_for(&state, app_request)
         .with_workspace(&workspace_id, |workspace| {
             if let Some(IdempotentResult::Chain(chain)) = workspace.idempotency.get(&key) {
                 return Mutation::Unchanged(Some((StatusCode::OK, chain.clone())));
@@ -777,9 +846,11 @@ async fn add_cost(
         })
         .await
         .map_err(store_error)?
-        .ok_or_else(missing_workspace)?
-        .ok_or_else(missing_chain)?;
-    let mut response = (result.0, Json(JobView::from(result.1))).into_response();
+        .ok_or_else(|| missing_workspace_for(app_request))?
+        .ok_or_else(|| missing_chain_for(app_request))?;
+    let permissions =
+        permissions_for_workspace_id(&state, &headers, &workspace_id, app_request).await?;
+    let mut response = (result.0, Json(project_job(result.1, permissions))).into_response();
     demo_no_store(&mut response);
     Ok(response)
 }
@@ -792,14 +863,17 @@ struct ScopePatch {
 async fn update_scope(
     State(state): State<AppState>,
     Path((chain_id, scope_id)): Path<(String, String)>,
+    OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
     Json(input): Json<ScopePatch>,
 ) -> Result<Response, ApiError> {
-    let workspace_id = workspace_id(&headers)?;
+    let app_request = is_app_request(&uri);
+    let workspace_id = workspace_id_for(&headers, app_request)?;
     require_agency_role(
         &state,
         &headers,
         &workspace_id,
+        app_request,
         &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
     )
     .await?;
@@ -812,7 +886,7 @@ async fn update_scope(
             "A pending demo revision can only be approved.",
         ));
     }
-    let result = store_for(&state, &headers)
+    let result = store_for(&state, app_request)
         .with_workspace(&workspace_id, |workspace| {
             let Some(chain) = workspace
                 .chains
@@ -830,9 +904,13 @@ async fn update_scope(
         })
         .await
         .map_err(store_error)?
-        .ok_or_else(missing_workspace)?
-        .ok_or_else(|| missing_record("scope_not_found", "Scope revision not found"))?;
-    let mut response = Json(JobView::from(result)).into_response();
+        .ok_or_else(|| missing_workspace_for(app_request))?
+        .ok_or_else(|| {
+            missing_record_for(app_request, "scope_not_found", "Scope revision not found")
+        })?;
+    let permissions =
+        permissions_for_workspace_id(&state, &headers, &workspace_id, app_request).await?;
+    let mut response = Json(project_job(result, permissions)).into_response();
     demo_no_store(&mut response);
     Ok(response)
 }
@@ -845,19 +923,22 @@ struct MilestonePatch {
 async fn update_milestone(
     State(state): State<AppState>,
     Path((chain_id, milestone_id)): Path<(String, String)>,
+    OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
     Json(input): Json<MilestonePatch>,
 ) -> Result<Response, ApiError> {
-    let workspace_id = workspace_id(&headers)?;
+    let app_request = is_app_request(&uri);
+    let workspace_id = workspace_id_for(&headers, app_request)?;
     require_agency_role(
         &state,
         &headers,
         &workspace_id,
+        app_request,
         &[AgencyRole::Owner, AgencyRole::Finance, AgencyRole::Producer],
     )
     .await?;
     check_demo_write(&state, &headers, &workspace_id).await?;
-    let result = store_for(&state, &headers)
+    let result = store_for(&state, app_request)
         .with_workspace(&workspace_id, |workspace| {
             let Some(chain) = workspace
                 .chains
@@ -878,7 +959,7 @@ async fn update_milestone(
                     StatusCode::CONFLICT,
                     "invalid_transition",
                     "Invoice state cannot change",
-                    "Choose the next invoice state and try again.",
+                    "Choose the next client invoice milestone status and try again.",
                 ))));
             }
             milestone.status = input.status;
@@ -887,14 +968,26 @@ async fn update_milestone(
         })
         .await
         .map_err(store_error)?
-        .ok_or_else(missing_workspace)?
-        .ok_or_else(|| missing_record("milestone_not_found", "Client milestone not found"))??;
-    let mut response = Json(JobView::from(result)).into_response();
+        .ok_or_else(|| missing_workspace_for(app_request))?
+        .ok_or_else(|| {
+            missing_record_for(
+                app_request,
+                "milestone_not_found",
+                "Client invoice milestone not found",
+            )
+        })??;
+    let permissions =
+        permissions_for_workspace_id(&state, &headers, &workspace_id, app_request).await?;
+    let mut response = Json(project_job(result, permissions)).into_response();
     demo_no_store(&mut response);
     Ok(response)
 }
 
 fn workspace_id(headers: &HeaderMap) -> Result<String, ApiError> {
+    workspace_id_for(headers, false)
+}
+
+fn workspace_id_for(headers: &HeaderMap, app_request: bool) -> Result<String, ApiError> {
     let cookies = headers
         .get(header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -903,10 +996,14 @@ fn workspace_id(headers: &HeaderMap) -> Result<String, ApiError> {
         .split(';')
         .filter_map(|item| item.trim().split_once('='))
         .find_map(|(name, value)| {
-            ((name == COOKIE_NAME || name == AGENCY_COOKIE_NAME) && !value.is_empty())
-                .then(|| value.to_owned())
+            let wanted = if app_request {
+                AGENCY_COOKIE_NAME
+            } else {
+                COOKIE_NAME
+            };
+            (name == wanted && !value.is_empty()).then(|| value.to_owned())
         })
-        .ok_or_else(missing_workspace)
+        .ok_or_else(|| missing_workspace_for(app_request))
 }
 
 fn agency_id(headers: &HeaderMap) -> Result<String, ApiError> {
@@ -933,12 +1030,84 @@ fn cookie(headers: &HeaderMap, wanted: &str) -> Option<String> {
         .find_map(|(name, value)| (name == wanted && !value.is_empty()).then(|| value.to_owned()))
 }
 
-fn store_for<'a>(state: &'a AppState, headers: &HeaderMap) -> &'a crate::demo::DemoStore {
-    if cookie(headers, AGENCY_COOKIE_NAME).is_some() {
+fn is_app_request(uri: &axum::http::Uri) -> bool {
+    uri.path().starts_with("/api/v1/app/")
+}
+
+fn store_for(state: &AppState, app_request: bool) -> &crate::demo::DemoStore {
+    if app_request {
         &state.agency
     } else {
         &state.demo
     }
+}
+
+fn permissions_for(
+    workspace: &crate::demo::Workspace,
+    headers: &HeaderMap,
+) -> Result<AgencyPermissions, ApiError> {
+    if workspace.permanent {
+        Ok(AgencyPermissions::for_role(
+            agency_member(workspace, headers)?.role,
+        ))
+    } else {
+        Ok(AgencyPermissions::demo())
+    }
+}
+
+async fn permissions_for_workspace_id(
+    state: &AppState,
+    headers: &HeaderMap,
+    workspace_id: &str,
+    app_request: bool,
+) -> Result<AgencyPermissions, ApiError> {
+    if !app_request {
+        return Ok(AgencyPermissions::demo());
+    }
+    let workspace = state
+        .agency
+        .get(workspace_id)
+        .await
+        .map_err(store_error)?
+        .ok_or_else(missing_agency)?;
+    permissions_for(&workspace, headers)
+}
+
+fn project_job(chain: JobChain, permissions: AgencyPermissions) -> Value {
+    let mut value = serde_json::to_value(JobView::from(chain))
+        .expect("job views contain only serializable domain values");
+    let object = value
+        .as_object_mut()
+        .expect("a serialized job view is a JSON object");
+    object.insert("permissions".into(), json!(permissions));
+    object.insert(
+        "client_identity_hidden".into(),
+        json!(!permissions.view_client_identities),
+    );
+    object.insert(
+        "subcontractor_rates_hidden".into(),
+        json!(!permissions.view_subcontractor_rates),
+    );
+    if !permissions.view_client_identities {
+        object.remove("contracting_client");
+        object.remove("end_client");
+    }
+    if !permissions.view_subcontractor_rates {
+        object.insert("costs".into(), json!([]));
+        object.remove("last_risk_cause");
+        let calculation = object
+            .get_mut("calculation")
+            .and_then(Value::as_object_mut)
+            .expect("a job view includes its calculation");
+        calculation.insert("committed_cost_minor".into(), Value::Null);
+        calculation.insert("expected_margin_minor".into(), Value::Null);
+        calculation.insert("margin_floor_minor".into(), Value::Null);
+        calculation.insert("margin_at_risk_minor".into(), Value::Null);
+        calculation.insert("margin_percent_tenths".into(), Value::Null);
+        calculation.insert("cause".into(), Value::Null);
+        calculation.insert("risk_state".into(), json!("restricted"));
+    }
+    value
 }
 
 fn agency_member<'a>(
@@ -966,10 +1135,11 @@ async fn require_agency_role(
     state: &AppState,
     headers: &HeaderMap,
     workspace_id: &str,
+    app_request: bool,
     allowed: &[AgencyRole],
 ) -> Result<(), ApiError> {
     // Demo requests deliberately remain open inside their isolated workspace.
-    if cookie(headers, AGENCY_COOKIE_NAME).is_none() {
+    if !app_request {
         return Ok(());
     }
     let workspace = state
@@ -1059,12 +1229,12 @@ fn forwarded_https(headers: &HeaderMap) -> bool {
 }
 
 fn store_error(error: StoreError) -> ApiError {
-    tracing::error!(?error, "demo persistence unavailable");
+    tracing::error!(?error, "workspace persistence unavailable");
     ApiError::new(
         StatusCode::SERVICE_UNAVAILABLE,
-        "demo_store_unavailable",
-        "Demo temporarily unavailable",
-        "The shared demo store could not be reached. Wait a moment, then try again.",
+        "workspace_store_unavailable",
+        "Workspace temporarily unavailable",
+        "The workspace store could not be reached. Wait a moment, then try again.",
     )
 }
 
@@ -1077,6 +1247,14 @@ fn missing_workspace() -> ApiError {
     )
 }
 
+fn missing_workspace_for(app_request: bool) -> ApiError {
+    if app_request {
+        missing_agency()
+    } else {
+        missing_workspace()
+    }
+}
+
 fn missing_agency() -> ApiError {
     ApiError::new(
         StatusCode::UNAUTHORIZED,
@@ -1086,8 +1264,21 @@ fn missing_agency() -> ApiError {
     )
 }
 
-fn missing_chain() -> ApiError {
-    missing_record("chain_not_found", "Job chain not found")
+fn missing_chain_for(app_request: bool) -> ApiError {
+    missing_record_for(app_request, "chain_not_found", "Job chain not found")
+}
+
+fn missing_record_for(app_request: bool, code: &'static str, title: &'static str) -> ApiError {
+    if app_request {
+        ApiError::new(
+            StatusCode::NOT_FOUND,
+            code,
+            title,
+            "This saved record is not available. Return to the job register.",
+        )
+    } else {
+        missing_record(code, title)
+    }
 }
 
 fn missing_record(code: &'static str, title: &'static str) -> ApiError {

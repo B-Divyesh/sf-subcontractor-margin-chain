@@ -10,15 +10,18 @@ export function useDemoRevision() {
 }
 
 const titles: Array<[RegExp, string, string]> = [
-  [/^\/$/, "Subcontractor Margin Chain — protect job margin", "Link client commitments, subcontractor costs, approvals, and invoice milestones before a job loses margin."],
+  [/^\/$/, "Subcontractor Margin Chain — protect job margin", "Link client commitments, subcontractor costs, approvals, and client invoice milestones before a job loses margin."],
   [/^\/demo$/, "Demo — Subcontractor Margin Chain", "Try the margin chain with isolated sample agency data."],
   [/^\/demo\/import$/, "Import demo jobs — Subcontractor Margin Chain", "Map spreadsheet columns and preview sample job chains before importing them."],
   [/^\/demo\/chains\/new$/, "New demo job — Subcontractor Margin Chain", "Add a sample job chain and check its margin."],
-  [/^\/demo\/chains\//, "Demo job — Subcontractor Margin Chain", "Review a sample job’s commitment, scope, costs, invoice milestones, and margin."],
+  [/^\/demo\/chains\//, "Demo job — Subcontractor Margin Chain", "Review a sample job’s commitment, scope, costs, client invoice milestones, and margin."],
   [/^\/start$/, "Set up your agency — Subcontractor Margin Chain", "Create a saved agency workspace for real job chains."],
+  [/^\/app\/import$/, "Import saved jobs — Subcontractor Margin Chain", "Map spreadsheet columns and preview real job chains before importing them."],
   [/^\/app\/chains\/new$/, "New job chain — Subcontractor Margin Chain", "Add a saved job chain and check its margin."],
-  [/^\/app\/chains\//, "Job chain — Subcontractor Margin Chain", "Review a saved job’s commitment, scope, costs, invoice milestones, and margin."],
+  [/^\/app\/chains\//, "Job chain — Subcontractor Margin Chain", "Review a saved job’s commitment, scope, costs, client invoice milestones, and margin."],
   [/^\/app\/chains$/, "Job chains — Subcontractor Margin Chain", "Review saved agency job chains and expected margins."],
+  [/^\/settings\/team$/, "Team access — Subcontractor Margin Chain", "Choose who can view client identities and subcontractor costs."],
+  [/^\/access\//, "Open team access — Subcontractor Margin Chain", "Open a private role-limited agency workspace."],
   [/^\/privacy$/, "Privacy — Subcontractor Margin Chain", "How the public site and isolated demo handle data."],
   [/^\/terms$/, "Terms — Subcontractor Margin Chain", "Terms for using the public site and sample demo."],
   [/./, "Page not found — Subcontractor Margin Chain", "Return to Subcontractor Margin Chain or open the sample demo."],
@@ -28,6 +31,7 @@ export function AppFrame() {
   const location = useLocation();
   const navigate = useNavigate();
   const inDemo = location.pathname.startsWith("/demo");
+  const inAgency = location.pathname.startsWith("/app") || location.pathname.startsWith("/settings");
   const [revision, setRevision] = useState(0);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -97,15 +101,15 @@ export function AppFrame() {
       <a className="skip-link" href="#main">Skip to main content</a>
       <header className="site-header">
         <div className="site-header__inner">
-          <Link className="wordmark" to="/">
+          <Link className="wordmark" to="/" aria-label="MC Margin Chain">
             <span className="wordmark__mark">MC</span>
-            <span>Margin Chain</span>
+            {" "}
+            <span className="wordmark__name">Margin Chain</span>
           </Link>
           <nav aria-label="Main navigation">
             <Link to="/demo">Demo</Link>
-            {location.pathname.startsWith("/app") && <Link to="/settings/team">Team</Link>}
-            <Link to="/#how">How it works</Link>
-            <Link to="/#pricing">Pricing</Link>
+            {inAgency ? <Link className="mobile-optional" to="/app/chains">Job register</Link> : <Link className="mobile-optional" to="/#how">How it works</Link>}
+            {inAgency ? <Link className="mobile-optional" to="/settings/team">Team</Link> : <Link className="mobile-optional" to="/#workspace">Saved workspace</Link>}
             <Link to="/privacy">Privacy</Link>
           </nav>
         </div>

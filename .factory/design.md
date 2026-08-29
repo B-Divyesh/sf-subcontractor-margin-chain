@@ -130,3 +130,7 @@ The CSV import screen uses the same ruled paper, carbon accents, tight radii, an
 ## Polish 2 additions
 
 `/start`, `/app/chains`, and `/settings/team` reuse the ledger surface rather than introducing account-dashboard chrome. The real workspace begins as a clean unstacked sheet, while the demo retains its cyan/red sample stack and explicit banner. The team screen uses written role consequences beside the access-link action. On small screens these routes keep the same 16px gutters, single-column form treatment, and wrapping access-link text; no real-record control is hidden behind the demo banner.
+
+## Polish 3 additions
+
+Restricted team views keep the ledger structure but replace protected client identities, subcontractor rows, and margin figures with written “hidden for this role” states. They never render zeroes as if redacted values were real. The saved-workspace CSV importer uses the same ruled, single-column mapping and dry-run treatment as the isolated demo. The landing commercial section is now an honest free-beta record instead of a pricing card, while retaining the carbon-copy sheet geometry and palette.

@@ -28,11 +28,15 @@ export function riskLabel(state: RiskState): string {
     safe: "Above floor",
     near_floor: "Near margin floor",
     below_floor: "Below floor",
+    restricted: "Margin hidden",
   }[state];
 }
 
 export function marginMessage(chain: JobChain | { calculation: MarginCalculation; margin_floor_basis_points: number }): string {
   const { calculation } = chain;
+  if (calculation.risk_state === "restricted") {
+    return "Subcontractor costs and margin are hidden for this role.";
+  }
   if (calculation.risk_state === "incomplete") {
     return "Add the client commitment and confirmed costs before judging this margin.";
   }

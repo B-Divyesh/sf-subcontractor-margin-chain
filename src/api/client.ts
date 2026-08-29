@@ -1,4 +1,4 @@
-export type RiskState = "incomplete" | "safe" | "near_floor" | "below_floor";
+export type RiskState = "incomplete" | "safe" | "near_floor" | "below_floor" | "restricted";
 export type ScopeStatus = "pending" | "approved";
 export type MilestoneStatus = "planned" | "due" | "sent" | "part_paid" | "paid" | "overdue";
 
@@ -27,7 +27,7 @@ export type ClientMilestone = {
 
 export type MarginCalculation = {
   client_commitment_minor: number | null;
-  committed_cost_minor: number;
+  committed_cost_minor: number | null;
   expected_margin_minor: number | null;
   margin_floor_minor: number | null;
   margin_at_risk_minor: number | null;
@@ -41,8 +41,8 @@ export type MarginCalculation = {
 export type JobChain = {
   id: string;
   name: string;
-  contracting_client: string;
-  end_client: string | null;
+  contracting_client?: string;
+  end_client?: string | null;
   currency: string;
   client_commitment_minor: number | null;
   margin_floor_basis_points: number;
@@ -52,6 +52,17 @@ export type JobChain = {
   last_risk_cause: string | null;
   version: number;
   calculation: MarginCalculation;
+  client_identity_hidden?: boolean;
+  subcontractor_rates_hidden?: boolean;
+  permissions?: AgencyPermissions;
+};
+
+export type AgencyPermissions = {
+  view_client_identities: boolean;
+  view_subcontractor_rates: boolean;
+  manage_financials: boolean;
+  edit_operations: boolean;
+  manage_team: boolean;
 };
 
 export class ApiProblem extends Error {
@@ -82,7 +93,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new ApiProblem(0, {
       code: "offline",
-      detail: "The demo is offline. Reconnect, then try again. Your open page has not changed.",
+      detail: path.startsWith("/api/v1/app/")
+        ? "The agency workspace is offline. Reconnect, then try again. Your open page has not changed."
+        : "The demo is offline. Reconnect, then try again. Your open page has not changed.",
     });
   }
   if (!response.ok) {
@@ -106,6 +119,12 @@ function chainApi() {
 }
 
 export type Agency = { name: string; role: "owner" };
+export type AgencySession = {
+  active: boolean;
+  name?: string;
+  role?: "owner" | "finance" | "producer" | "viewer";
+  permissions?: AgencyPermissions;
+};
 
 export function createAgency(name: string): Promise<Agency> {
   return request("/api/v1/app/agency", { method: "POST", body: JSON.stringify({ name }) });
@@ -113,6 +132,10 @@ export function createAgency(name: string): Promise<Agency> {
 
 export function getAgency(): Promise<Agency> {
   return request("/api/v1/app/agency");
+}
+
+export function getAgencySession(): Promise<AgencySession> {
+  return request("/api/v1/app/session");
 }
 
 export type MemberInvite = { id: string; role: "finance" | "producer" | "viewer"; access_path: string };

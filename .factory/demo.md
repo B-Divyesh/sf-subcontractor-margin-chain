@@ -27,7 +27,7 @@ The fictional demo agency is **Northline Studio**. Names and values are original
    - Committed subcontractor costs: Samira Chen, edit, USD 6,200; Osei Reed, production, USD 8,300
    - Expected margin: USD 9,500 (39.6%); floor: 20% (USD 4,800)
    - Scope: launch film approved; social cut-down revision pending
-   - Client milestones: USD 12,000 sent; USD 12,000 planned
+   - Client invoice milestones: USD 12,000 sent; USD 12,000 planned
 2. **Annual report microsite**
    - Contracting client: Common Thread Partners
    - End client: Harbor Grid

@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppFrame } from "../components/AppFrame";
+import { RequireAgency } from "../components/AgencyGate";
 import { ChainPage } from "../routes/ChainPage";
 import { DemoPage } from "../routes/DemoPage";
 import { LandingPage } from "../routes/LandingPage";
@@ -20,10 +21,13 @@ export function App() {
           <Route path="demo/chains/new" element={<NewChainPage />} />
           <Route path="demo/chains/:chainId" element={<ChainPage />} />
           <Route path="start" element={<StartPage />} />
-          <Route path="app/chains" element={<DemoPage />} />
-          <Route path="app/chains/new" element={<NewChainPage />} />
-          <Route path="app/chains/:chainId" element={<ChainPage />} />
-          <Route path="settings/team" element={<TeamPage />} />
+          <Route element={<RequireAgency />}>
+            <Route path="app/chains" element={<DemoPage />} />
+            <Route path="app/import" element={<ImportPage />} />
+            <Route path="app/chains/new" element={<NewChainPage />} />
+            <Route path="app/chains/:chainId" element={<ChainPage />} />
+            <Route path="settings/team" element={<TeamPage />} />
+          </Route>
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="404" element={<NotFoundPage />} />

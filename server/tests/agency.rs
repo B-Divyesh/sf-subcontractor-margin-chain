@@ -5,7 +5,10 @@ use axum::{
 use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use std::path::PathBuf;
-use subcontractor_margin_chain_server::{app_with_state, demo::AppState};
+use subcontractor_margin_chain_server::{
+    app_with_state,
+    demo::{AppState, DemoStore},
+};
 use tower::ServiceExt;
 
 async fn send(
@@ -91,6 +94,42 @@ async fn claim_real_agency_records_persist_without_demo_fixtures() {
 }
 
 #[tokio::test]
+async fn claim_real_agency_survives_replica_handoff_in_shared_persistence() {
+    let directory = tempfile::tempdir().unwrap();
+    let agency_store_a = DemoStore::filesystem(directory.path()).unwrap();
+    let agency_store_b = DemoStore::filesystem(directory.path()).unwrap();
+    let replica_a = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_stores(DemoStore::memory(), agency_store_a),
+    );
+    let replica_b = app_with_state(
+        PathBuf::from("missing-dist"),
+        AppState::with_stores(DemoStore::memory(), agency_store_b),
+    );
+    let cookie = agency(&replica_a, "Shared Agency").await;
+    let input = json!({"name":"Replica job","contracting_client":"Client","approved_scope":"Production","client_commitment_minor":500000,"margin_floor_basis_points":2000,"subcontractor":"Partner","cost_role":"Edit","cost_minor":200000});
+    let (status, _, _) = send(
+        &replica_a,
+        Method::POST,
+        "/api/v1/app/chains",
+        Some(&cookie),
+        Some(input),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let (status, _, records) = send(
+        &replica_b,
+        Method::GET,
+        "/api/v1/app/chains",
+        Some(&cookie),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(records["chains"][0]["name"], "Replica job");
+}
+
+#[tokio::test]
 async fn claim_real_agencies_are_tenant_isolated() {
     let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
     let first = agency(&app, "First Agency").await;
@@ -159,6 +198,8 @@ async fn claim_agency_roles_hide_rates_and_block_financial_writes() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert!(shaped["chains"][0]["costs"].as_array().unwrap().is_empty());
+    assert!(shaped["chains"][0]["calculation"]["committed_cost_minor"].is_null());
+    assert!(shaped["chains"][0]["calculation"]["expected_margin_minor"].is_null());
     let (status, _, _) = send(
         &app,
         Method::POST,
@@ -171,4 +212,104 @@ async fn claim_agency_roles_hide_rates_and_block_financial_writes() {
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn claim_restricted_roles_hide_client_identities_in_list_and_detail() {
+    let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
+    let owner = agency(&app, "Identity Agency").await;
+    let input = json!({"name":"Confidential launch","contracting_client":"Secret Contracting Client","end_client":"Secret End Client","approved_scope":"Launch production","client_commitment_minor":2000000,"margin_floor_basis_points":2000,"subcontractor":"Hidden Partner","cost_role":"Production","cost_minor":500000});
+    let (status, _, created) = send(
+        &app,
+        Method::POST,
+        "/api/v1/app/chains",
+        Some(&owner),
+        Some(input),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let chain_id = created["id"].as_str().unwrap();
+
+    for role in ["producer", "viewer"] {
+        let (status, _, invite) = send(
+            &app,
+            Method::POST,
+            "/api/v1/app/members",
+            Some(&owner),
+            Some(json!({"name":format!("{role} member"),"role":role})),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        let (status, headers, _) = send(
+            &app,
+            Method::GET,
+            invite["access_path"].as_str().unwrap(),
+            None,
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        let restricted_cookie = headers
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .map(|header| header.to_str().unwrap().split(';').next().unwrap())
+            .collect::<Vec<_>>()
+            .join("; ");
+
+        for path in [
+            "/api/v1/app/chains".to_owned(),
+            format!("/api/v1/app/chains/{chain_id}"),
+        ] {
+            let (status, _, projected) =
+                send(&app, Method::GET, &path, Some(&restricted_cookie), None).await;
+            assert_eq!(status, StatusCode::OK);
+            let chain = projected
+                .get("chains")
+                .and_then(|value| value.as_array())
+                .and_then(|chains| chains.first())
+                .unwrap_or(&projected);
+            assert!(chain.get("contracting_client").is_none());
+            assert!(chain.get("end_client").is_none());
+            assert_eq!(chain["client_identity_hidden"], true);
+            let serialized = chain.to_string();
+            assert!(!serialized.contains("Secret Contracting Client"));
+            assert!(!serialized.contains("Secret End Client"));
+        }
+    }
+}
+
+#[tokio::test]
+async fn app_routes_never_accept_a_demo_cookie_as_an_agency_session() {
+    let app = app_with_state(PathBuf::from("missing-dist"), AppState::default());
+    let (status, headers, _) =
+        send(&app, Method::POST, "/api/v1/demo/workspaces", None, None).await;
+    assert_eq!(status, StatusCode::CREATED);
+    let demo_cookie = headers
+        .get(header::SET_COOKIE)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap();
+    let (status, _, session) = send(
+        &app,
+        Method::GET,
+        "/api/v1/app/session",
+        Some(demo_cookie),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(session["active"], false);
+    let (status, _, problem) = send(
+        &app,
+        Method::GET,
+        "/api/v1/app/chains",
+        Some(demo_cookie),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(problem["code"], "agency_session_missing");
 }

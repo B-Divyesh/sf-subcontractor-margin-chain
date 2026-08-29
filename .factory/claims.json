@@ -14,11 +14,46 @@
     "sandbox": "create two agency sessions; create a chain in one; assert the other register is empty"
   },
   {
+    "id": "real-shared-replica-persistence",
+    "claim": "Saved agency workspaces persist across application replicas through a shared durable store",
+    "where": "README, runtime architecture",
+    "test": "cargo test --manifest-path server/Cargo.toml --test agency claim_real_agency_survives_replica_handoff_in_shared_persistence --locked",
+    "sandbox": "two application states share a durable agency store; create an agency and job on one; read the saved job from the other"
+  },
+  {
     "id": "agency-role-projection",
-    "claim": "Producer sessions cannot view subcontractor rates or add financial commitments",
+    "claim": "Producer sessions cannot view subcontractor costs or derived margin totals, or add financial commitments",
     "where": "real agency API and privacy policy",
     "test": "cargo test --manifest-path server/Cargo.toml --test agency claim_agency_roles_hide_rates_and_block_financial_writes --locked",
-    "sandbox": "owner creates a chain and producer session; assert costs are absent and a cost write returns 403"
+    "sandbox": "owner creates a chain and producer session; assert costs and derived margin totals are absent and a cost write returns 403"
+  },
+  {
+    "id": "agency-client-identity-projection",
+    "claim": "Producer and viewer sessions cannot obtain contracting-client or end-client identities",
+    "where": "team role controls, privacy policy, real agency API",
+    "test": "cargo test --manifest-path server/Cargo.toml --test agency claim_restricted_roles_hide_client_identities_in_list_and_detail --locked",
+    "sandbox": "owner creates a chain with unique client identities; open producer and viewer sessions; assert list and detail responses omit both fields and values"
+  },
+  {
+    "id": "real-csv-import",
+    "claim": "Maps and previews CSV rows before importing job chains into a saved agency workspace",
+    "where": "real job register, /app/import, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:real-csv-import",
+    "sandbox": "fresh browser; create an agency; load the bundled CSV; preview two valid rows; import and reload both saved jobs"
+  },
+  {
+    "id": "real-data-export",
+    "claim": "Exports saved agency job chains as local CSV or JSON downloads",
+    "where": "real job register, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:real-data-export",
+    "sandbox": "fresh browser; create an agency and job; download CSV and JSON; assert saved values are present and no export request occurs"
+  },
+  {
+    "id": "real-beta-no-billing",
+    "claim": "The saved agency workspace beta has no checkout or paid plan",
+    "where": "landing first-screen facts, saved workspace section, README",
+    "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:real-beta-no-billing",
+    "sandbox": "fresh landing page; assert free-beta wording, no pricing navigation, no checkout control, and no billing-provider request"
   },
   {
     "id": "m1-chain-math",
@@ -36,14 +71,14 @@
   },
   {
     "id": "m1-linked-status",
-    "claim": "Keeps scope approval and client invoice status beside the same job",
+    "claim": "Keeps scope approval and client invoice milestone status beside the same job",
     "where": "landing steps, demo job workspace, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-linked-status",
     "sandbox": "fresh /demo workspace; approve scope and mark its client invoice milestone sent; reload and assert both states remain"
   },
   {
     "id": "m1-sample-workflow",
-    "claim": "The demo creates a job chain, adds a cost, approves scope, updates an invoice state, and resets the sample",
+    "claim": "The demo creates a job chain, adds a cost, approves scope, updates a client invoice milestone status, and resets the sample",
     "where": "README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-sample-workflow",
     "sandbox": "fresh /demo workspace; perform every named action and assert reset restores exactly three original jobs"
@@ -78,7 +113,7 @@
   },
   {
     "id": "m1-public-privacy",
-    "claim": "The public and demo flow makes no cross-origin requests",
+    "claim": "The public and demo flow makes no cross-origin requests and loads no analytics",
     "where": "privacy, README",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-public-privacy",
     "sandbox": "record every request through landing, demo, and a mutation; assert only the product origin is used"
@@ -102,7 +137,7 @@
     "claim": "The demo does not calculate tax, decide worker status, collect money, or send invoices",
     "where": "landing limits, terms",
     "test": "npx playwright test tests/e2e/m1.spec.ts --grep @claim:m1-product-boundaries",
-    "sandbox": "inspect demo controls and response keys; assert prohibited capabilities are absent while invoice state marking remains"
+    "sandbox": "inspect demo controls and response keys; assert prohibited capabilities are absent while client invoice milestone status marking remains"
   },
   {
     "id": "real-workspace-onboarding",

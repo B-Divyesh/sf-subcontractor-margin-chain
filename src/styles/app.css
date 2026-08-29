@@ -197,6 +197,9 @@
   .status-stamp--sent, .status-stamp--part_paid { color: var(--color-carbon); background: var(--color-paper-blue); }
   .status-stamp--overdue, .risk-label--below_floor { color: var(--color-danger); background: var(--color-paper-red); }
   .risk-label--incomplete { color: var(--color-ink-muted); background: var(--color-paper); }
+  .risk-label--restricted { color: var(--color-ink-muted); background: var(--color-paper); }
+  .restricted-note { margin: 0; color: var(--color-ink-muted); }
+  .chain-check code { display: block; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
 
   .feedback-panel {
     max-width: 46rem;
@@ -254,7 +257,7 @@
   .hero {
     display: grid;
     min-height: min(48rem, calc(100vh - 4.75rem));
-    padding-block: var(--space-8);
+    padding-block: var(--space-7);
     grid-template-columns: minmax(0, 1.05fr) minmax(20rem, 0.95fr);
     align-items: center;
     gap: clamp(2rem, 6vw, 6rem);
@@ -417,17 +420,22 @@
 
   @media (max-width: 599px) {
     .section-shell, .site-header__inner, .site-footer { width: min(calc(100% - 2rem), var(--content-max)); }
-    .site-header__inner { min-height: auto; padding-block: var(--space-3); align-items: flex-start; flex-direction: column; gap: var(--space-2); }
-    .site-header nav { width: 100%; gap: var(--space-3); overflow-x: auto; flex-wrap: nowrap; }
+    .site-header__inner { min-height: 3.75rem; padding-block: var(--space-2); align-items: center; flex-direction: row; gap: var(--space-3); }
+    .site-header nav { width: auto; gap: var(--space-3); overflow: visible; flex-wrap: nowrap; }
     .site-header nav a { flex: 0 0 auto; }
+    .site-header nav .mobile-optional { display: none; }
     .wordmark__mark { width: 2.5rem; height: 2.5rem; }
+    .wordmark__name { display: none; }
     .demo-banner { position: static; padding: var(--space-3) var(--space-4); align-items: flex-start; flex-direction: column; }
     .demo-banner .button-row { width: 100%; }
     .demo-banner button { flex: 1; }
-    .hero { padding-block: var(--space-7); gap: var(--space-5); }
-    .hero__actions { align-items: stretch; flex-direction: column; gap: var(--space-2); }
+    .hero { padding-block: var(--space-5); gap: var(--space-5); }
+    .hero__copy h1 { font-size: 2rem; }
+    .hero__actions { margin-top: var(--space-4); align-items: stretch; flex-direction: column; gap: var(--space-2); }
     .hero__actions > * { width: 100%; justify-content: center; }
-    .plain-facts { display: grid; }
+    .hero__actions .inline-link { display: none; }
+    .action-note { margin-block: var(--space-2) var(--space-3); }
+    .plain-facts { display: grid; gap: var(--space-1); }
     .preview-section, .how-section, .limits-section, .pricing-section { padding-block: var(--space-8); }
     .ledger-stack { box-shadow: 5px 6px 0 #9ccbd0, 10px 12px 0 #d7a99d; }
     .record-heading { align-items: flex-start; flex-direction: column; }

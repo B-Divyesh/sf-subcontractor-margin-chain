@@ -1,9 +1,10 @@
 import { FormEvent, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ApiProblem, createAgency } from "../api/client";
 
 export function StartPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const field = useRef<HTMLInputElement>(null);
@@ -13,7 +14,12 @@ export function StartPage() {
     const name = new FormData(event.currentTarget).get("name")?.toString().trim() ?? "";
     if (name.length < 2) { setError("Enter your agency name."); field.current?.focus(); return; }
     setSaving(true); setError("");
-    try { await createAgency(name); navigate("/app/chains"); }
+    try {
+      await createAgency(name);
+      const requested = (location.state as { returnTo?: string } | null)?.returnTo;
+      const returnTo = requested?.startsWith("/app/") || requested === "/settings/team" ? requested : "/app/chains";
+      navigate(returnTo, { replace: true });
+    }
     catch (problem) { setError(problem instanceof ApiProblem ? problem.message : "We could not create your agency. Try again."); }
     finally { setSaving(false); }
   }

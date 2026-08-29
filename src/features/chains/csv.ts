@@ -158,12 +158,12 @@ export function chainsToCsv(chains: JobChain[]): string {
   const headings = [
     "job_id", "job_name", "contracting_client", "end_client", "currency", "client_commitment",
     "committed_cost", "expected_margin", "margin_percent", "margin_floor_percent", "risk_state",
-    "subcontractor_commitments", "scope_statuses", "client_invoice_statuses",
+    "subcontractor_commitments", "scope_statuses", "client_invoice_milestone_statuses",
   ];
   const rows = chains.map((chain) => [
     chain.id,
     chain.name,
-    chain.contracting_client,
+    chain.contracting_client ?? "",
     chain.end_client ?? "",
     chain.currency,
     decimal(chain.calculation.client_commitment_minor),

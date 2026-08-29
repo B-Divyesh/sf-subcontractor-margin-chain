@@ -1,6 +1,7 @@
 import { type FormEvent, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiProblem, createChain } from "../api/client";
+import { useAgencySession } from "../components/AgencyGate";
 import { dollarsToMinor, formatMoney, localCalculation } from "../features/chains/model";
 
 type Draft = {
@@ -30,6 +31,7 @@ const initialDraft: Draft = {
 export function NewChainPage() {
   const navigate = useNavigate();
   const isReal = useLocation().pathname.startsWith("/app");
+  const agencySession = useAgencySession();
   const base = isReal ? "/app/chains" : "/demo";
   const chainBase = isReal ? "/app/chains" : "/demo/chains";
   const [draft, setDraft] = useState(initialDraft);
@@ -100,6 +102,16 @@ export function NewChainPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (isReal && !agencySession?.permissions?.manage_financials) {
+    return (
+      <main id="main" className="app-main section-shell">
+        <h1 tabIndex={-1}>Adding jobs is not available for this role</h1>
+        <p>Only owners and finance members can enter client identities and subcontractor costs.</p>
+        <Link className="primary-action" to="/app/chains">Return to job chains</Link>
+      </main>
+    );
   }
 
   return (

@@ -3,12 +3,17 @@ import { Link, useLocation } from "react-router-dom";
 import { listChains, type JobChain } from "../api/client";
 import { FeedbackPanel, JobRegister, SummaryStrip } from "../components/ChainComponents";
 import { useDemoRevision } from "../components/AppFrame";
+import { useAgencySession } from "../components/AgencyGate";
 import { chainsToCsv, chainsToJson, downloadText } from "../features/chains/csv";
 
 export function DemoPage() {
   const isReal = useLocation().pathname.startsWith("/app");
   const base = isReal ? "/app/chains" : "/demo";
+  const chainBase = isReal ? "/app/chains" : "/demo/chains";
   const newChainPath = isReal ? "/app/chains/new" : "/demo/chains/new";
+  const importPath = isReal ? "/app/import" : "/demo/import";
+  const agencySession = useAgencySession();
+  const canManageFinancials = !isReal || Boolean(agencySession?.permissions?.manage_financials);
   const revision = useDemoRevision();
   const [chains, setChains] = useState<JobChain[] | null>(null);
   const [error, setError] = useState("");
@@ -30,11 +35,11 @@ export function DemoPage() {
         <div>
           <p className="eyebrow">{isReal ? "Saved agency workspace" : "Northline Studio · sample workspace"}</p>
           <h1 tabIndex={-1}>Job margin register</h1>
-          <p>Review the jobs that need a commercial decision before the next invoice.</p>
+          <p>Review the jobs that need a commercial decision before the next client invoice milestone.</p>
         </div>
         <div className="button-row demo-actions">
-          <Link className="primary-action" to={newChainPath}>Add a job chain</Link>
-          {!isReal && <Link className="secondary-action" to="/demo/import">Import CSV</Link>}
+          {canManageFinancials && <Link className="primary-action" to={newChainPath}>Add a job chain</Link>}
+          {canManageFinancials && <Link className="secondary-action" to={importPath}>Import CSV</Link>}
         </div>
       </header>
       {error ? (
@@ -56,7 +61,7 @@ export function DemoPage() {
               <button className="text-button" type="button" onClick={() => downloadText("margin-chain-jobs.json", chainsToJson(chains), "application/json")}>Export JSON</button>
             </div>
           </div>
-          <JobRegister chains={chains} />
+          <JobRegister chains={chains} chainBase={chainBase} canAdd={canManageFinancials} />
         </>
       )}
     </main>

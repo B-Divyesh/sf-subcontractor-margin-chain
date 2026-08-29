@@ -33,11 +33,11 @@ export function LandingPage() {
             <Link className="primary-action" to="/?demo=1">Try it with sample data</Link>
             <a className="inline-link" href="#how">See how the chain works</a>
           </div>
-          <p className="action-note">See a filled job chain. Add a cost, approve scope, or mark an invoice sent. Reset when finished.</p>
+          <p className="action-note">See a filled job chain. Add a cost, approve scope, or mark a client invoice milestone sent. Reset when finished.</p>
           <ul className="plain-facts" aria-label="Product facts">
             <li>No account for the demo.</li>
             <li>Demo changes are discarded.</li>
-            <li>Start a saved agency workspace.</li>
+            <li>The saved workspace is a free beta.</li>
           </ul>
         </div>
         <div className="hero__art" aria-hidden="false"><LedgerIllustration /></div>
@@ -46,7 +46,7 @@ export function LandingPage() {
       <section className="preview-section section-shell" aria-labelledby="preview-title">
         <div className="section-heading">
           <p className="eyebrow">Job margin preview</p>
-          <h2 id="preview-title">See commitment, cost, and invoice status together.</h2>
+          <h2 id="preview-title">See commitment, cost, and client invoice milestone status together.</h2>
         </div>
         <article className="ledger-stack ledger-stack--preview">
           <header className="record-heading">
@@ -91,16 +91,16 @@ export function LandingPage() {
         </ul>
       </section>
 
-      <section className="pricing-section section-shell" id="pricing" aria-labelledby="pricing-title">
+      <section className="pricing-section section-shell" id="workspace" aria-labelledby="workspace-title">
         <div className="section-heading">
-          <p className="eyebrow">Agency workspace</p>
-          <h2 id="pricing-title">Save real job chains for your agency.</h2>
-          <p>Create a workspace, then add real job chains separately from the sample.</p>
+          <p className="eyebrow">Saved workspace beta</p>
+          <h2 id="workspace-title">Create a saved workspace.</h2>
+          <p>Create real job chains separately from the sample. This beta has no checkout or paid plan.</p>
         </div>
         <div className="price-ledger">
           <article>
-            <h3>Start now</h3>
-            <p className="price"><strong>Saved</strong> agency records</p>
+            <h3>Save real job chains</h3>
+            <p className="price"><strong>Free beta</strong></p>
             <p><Link className="inline-link" to="/start">Create your agency workspace</Link></p>
           </article>
           <article>

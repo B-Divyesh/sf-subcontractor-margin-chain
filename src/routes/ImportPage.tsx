@@ -1,6 +1,7 @@
 import { type ChangeEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createChain } from "../api/client";
+import { useAgencySession } from "../components/AgencyGate";
 import {
   importFields,
   parseCsv,
@@ -14,6 +15,10 @@ import {
 
 export function ImportPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const agencySession = useAgencySession();
+  const isReal = location.pathname.startsWith("/app");
+  const registerPath = isReal ? "/app/chains" : "/demo";
   const [document, setDocument] = useState<ParsedCsv | null>(null);
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
   const [preview, setPreview] = useState<ImportPreviewRow[] | null>(null);
@@ -56,7 +61,7 @@ export function ImportPage() {
     setError("");
     try {
       for (const row of valid) await createChain(row.input!, `csv-${batchKey}-${row.line}`);
-      navigate("/demo", { replace: true });
+      navigate(registerPath, { replace: true });
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "The jobs could not be imported. Try again.");
       setImporting(false);
@@ -66,13 +71,23 @@ export function ImportPage() {
   const validCount = preview?.filter((row) => row.input).length ?? 0;
   const errorCount = preview?.reduce((total, row) => total + row.errors.length, 0) ?? 0;
 
+  if (isReal && !agencySession?.permissions?.manage_financials) {
+    return (
+      <main id="main" className="app-main section-shell">
+        <h1 tabIndex={-1}>CSV import is not available for this role</h1>
+        <p>Only owners and finance members can import client commitments and subcontractor costs.</p>
+        <Link className="primary-action" to="/app/chains">Return to job chains</Link>
+      </main>
+    );
+  }
+
   return (
     <main id="main" className="app-main section-shell">
-      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/demo">Job register</Link><span aria-hidden="true">/</span><span>Import CSV</span></nav>
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to={registerPath}>Job register</Link><span aria-hidden="true">/</span><span>Import CSV</span></nav>
       <header className="page-heading">
-        <p className="eyebrow">Northline Studio · demo workspace</p>
+        <p className="eyebrow">{isReal ? "Saved agency workspace" : "Northline Studio · demo workspace"}</p>
         <h1 tabIndex={-1}>Import job chains from CSV</h1>
-        <p>Map each spreadsheet column, check every row, then add valid jobs to this isolated demo.</p>
+        <p>Map each spreadsheet column, check every row, then add valid jobs to {isReal ? "your saved workspace" : "this isolated demo"}.</p>
       </header>
 
       {error && <p className="form-error action-error" role="alert">{error}</p>}

@@ -11,7 +11,12 @@ describe("public claim registry", () => {
     expect(ids).toEqual([
       "real-agency-records",
       "real-tenant-isolation",
+      "real-shared-replica-persistence",
       "agency-role-projection",
+      "agency-client-identity-projection",
+      "real-csv-import",
+      "real-data-export",
+      "real-beta-no-billing",
       "m1-chain-math",
       "m1-margin-risk",
       "m1-linked-status",
