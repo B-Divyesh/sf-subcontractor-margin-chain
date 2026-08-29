@@ -45,7 +45,7 @@ Body and state text pairs target WCAG AA (4.5:1). UI outlines and large figures 
 
 - **Display:** Newsreader, variable subset, OFL. Use for the single page headline, section headings, and the job name. Its editorial forms give the record authority without looking like accounting software.
 - **Body and figures:** Recursive, variable subset, OFL. Use its Sans axis for controls and copy and its Mono axis for money, IDs, dates, and tables. Set `font-variant-numeric: tabular-nums lining-nums` on all amounts.
-- Fallbacks in the token file are acceptable only in this planning scaffold. M1 must add `/public/fonts/`, licenses, preload at most two WOFF2 files, and `font-display: swap`.
+- Newsreader 600 and Recursive 400/700 Latin WOFF2 files are bundled locally with their OFL license and `font-display: swap`; no third-party font request is made.
 - Body is at least 16px with 1.55 line height. The display title is `clamp(2.25rem, 1.7rem + 2.5vw, 4.5rem)`. Supporting text stays within 68 characters per line.
 
 ## Spacing, shape, and depth

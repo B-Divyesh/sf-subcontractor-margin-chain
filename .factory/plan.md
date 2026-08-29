@@ -5,7 +5,7 @@ Product: `subcontractor-margin-chain`
 Artifact: web with backend  
 Production URL: `https://subcontractor-margin-chain.sociobot.in`  
 Plan date: 2026-08-28  
-Status: **M1 polish round 1 in progress; awaiting live verification**
+Status: **M1 polish round 1 complete; awaiting independent review**
 
 This plan is the build contract. A milestone builder reads this file, `.factory/design.md`, `.factory/demo.md`, `.factory/claims.json`, all prior handoffs, and the latest review notes before changing code. A milestone is not complete until its claims, tests, and definition of done pass from a clean checkout. Review and polish must pass before the next milestone begins.
 
@@ -281,7 +281,7 @@ The source of truth is [`.factory/design.md`](./design.md), and the implementati
 
 The product uses a **layered carbon-copy ledger**: warm paper, a cyan subcontractor duplicate, a red risk duplicate, crisp rules, and written stamps. The layers expose downstream consequences. No generic SaaS gradient, stock photo, glass card, or dashboard tile grid is allowed.
 
-The interface is intentionally single-mode light because it represents a daylight commercial record and must print predictably. Contrast and forced-colors support remain mandatory. Newsreader provides the editorial display voice; Recursive carries plain copy and tabular money. Both will be self-hosted as two subset WOFF2 files under OFL licenses.
+The interface is intentionally single-mode light because it represents a daylight commercial record and must print predictably. Contrast and forced-colors support remain mandatory. Newsreader provides the editorial display voice; Recursive carries plain copy and tabular money. Three Latin WOFF2 weights across the two families are self-hosted under OFL licenses.
 
 ### Tokens
 
@@ -316,7 +316,7 @@ The landing order is header → first screen → live product preview → three 
 
 ### M1 — Prove the margin chain in a one-click demo
 
-Status: **polish round 1 implemented locally; awaiting deployment and live re-verification**
+Status: **polish round 1 deployed and live-verified; awaiting independent review**
 User outcome: a stranger opens realistic sample jobs, creates or imports a chain, sees deterministic margin risk, exports records, and resets the sandbox without an account.
 
 #### Routes and screens added
